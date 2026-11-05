@@ -1,0 +1,9 @@
+{
+  "title": "Antriebsvergleich – schöner als eine Tabelle",
+  "round": 1,
+  "variants": [
+    { "id": "V1", "name": "Landkarte", "file": "variant-v1.html", "idea": "Interaktives Blasendiagramm Schub (log) gegen Isp – jede Blase ein Triebwerk, Familien farbig, Umschalten Meereshöhe ↔ Vakuum animiert." },
+    { "id": "V2", "name": "Duell", "file": "variant-v2.html", "idea": "Zwei Triebwerke Seite an Seite mit animierten Kennzahl-Balken und einem Δv-Rennen: gleiche Rakete, anderer Antrieb – wer kommt weiter?" },
+    { "id": "V3", "name": "Mission wählt", "file": "variant-v3.html", "idea": "Erst die Mission wählen (Start, Oberstufe, Marsreise, Lageregelung) – Triebwerkskarten sortieren sich animiert nach Eignung, mit Steckbrief-Profil je Karte." }
+  ]
+}

@@ -1,0 +1,2227 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prüfstand – Raketentriebwerke</title>
+<meta name="description" content="Hands-on-Prüfstand: Drossel, Mischungsverhältnis, Expansionsverhältnis und Umgebungsdruck einstellen und den Abgasstrahl live beobachten.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060708; --bg2:#0a0c0e; --panel:#0e1114; --panel2:#13171b; --panel3:#181d22;
+  --edge:rgba(255,255,255,.065); --edge2:rgba(255,255,255,.12);
+  --text:#eceee8; --muted:#8c939a; --dim:#596067;
+  --lime:#c8ff3c; --lime-glow:rgba(200,255,60,.45); --ember:#ff6b2c; --ember-glow:rgba(255,107,44,.5);
+  --amber:#ffb23e; --cyan:#43d3ff; --violet:#ab8cff; --red:#ff5a4f;
+  --acc:var(--lime);
+  --ease:cubic-bezier(.2,.8,.2,1); --ease-io:cubic-bezier(.65,0,.35,1);
+  --mono:'Space Mono',ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Space Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:clip}
+body{min-height:100svh}
+button{font:inherit;color:inherit}
+h1,h2,h3,p{margin:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- Kopfzeile ---------- */
+.top{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:12px 20px;height:64px;background:rgba(6,7,8,.84);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--edge)}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-mark{width:30px;height:30px;border-radius:8px;flex:none;position:relative;
+  background:radial-gradient(circle at 50% 60%,var(--ember) 0 18%,transparent 19%),linear-gradient(160deg,#20262c,#0b0d10);
+  border:1px solid var(--edge2);box-shadow:0 0 18px rgba(255,107,44,.25)}
+.brand-mark::after{content:"";position:absolute;inset:7px 9px 11px;border:1.5px solid #cfd3d7;border-bottom:0;border-radius:6px 6px 0 0;clip-path:polygon(0 0,100% 0,100% 100%,0 100%)}
+.eyebrow{font:500 10.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.brand h1{font-size:19px;font-weight:600;letter-spacing:-.01em;margin-top:3px}
+.brand h1 span{color:var(--dim);font-weight:400}
+
+.levels{position:relative;display:flex;padding:4px;border-radius:999px;background:#0b0e11;border:1px solid var(--edge);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+.levels button{position:relative;z-index:1;border:0;background:none;cursor:pointer;padding:8px 15px;border-radius:999px;
+  font-size:13px;font-weight:500;color:var(--muted);transition:color .35s var(--ease);white-space:nowrap}
+.levels button[aria-checked="true"]{color:#0a0c06}
+.levels button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.levels .lv-n{font:700 10px var(--mono);opacity:.6;margin-right:6px}
+.lv-pill{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:999px;background:var(--lime);
+  box-shadow:0 0 22px var(--lime-glow),inset 0 1px 0 rgba(255,255,255,.5);transition:transform .55s var(--ease),width .55s var(--ease)}
+
+/* ---------- Layout ---------- */
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 404px;align-items:start}
+.col-main{min-width:0;display:flex;flex-direction:column}
+.stage{position:relative;height:calc(100svh - 64px - 214px);min-height:440px;overflow:hidden;background:#040506;isolation:isolate}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:pan-y;cursor:grab}
+.stage canvas.dragging{cursor:grabbing}
+.stage::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:radial-gradient(120% 90% at 50% 45%,transparent 55%,rgba(0,0,0,.55) 100%),
+             linear-gradient(180deg,rgba(4,5,6,.55),transparent 18%,transparent 82%,rgba(4,5,6,.65))}
+.flash{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;
+  background:radial-gradient(60% 60% at 58% 52%,rgba(255,236,200,.95),rgba(255,140,60,.35) 45%,transparent 75%);mix-blend-mode:screen}
+.flash.go{animation:flash .9s ease-out}
+@keyframes flash{0%{opacity:0}8%{opacity:1}100%{opacity:0}}
+
+.hud{position:absolute;z-index:5;pointer-events:none}
+.hud-tl{top:20px;left:22px;max-width:min(420px,60%)}
+.hud-kicker{font:700 10.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--lime);display:flex;gap:10px;align-items:center}
+.hud-kicker::before{content:"";width:18px;height:1px;background:currentColor}
+.hud-name{font-size:clamp(26px,3.4vw,44px);font-weight:600;letter-spacing:-.035em;line-height:1;margin-top:10px}
+.hud-ex{margin-top:8px;color:var(--muted);font-size:13px}
+.swap{animation:swapIn .7s var(--ease) both}
+@keyframes swapIn{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+
+.hud-tr{top:18px;right:18px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.status{display:inline-flex;align-items:center;gap:9px;padding:7px 12px;border-radius:999px;background:rgba(10,12,14,.72);
+  border:1px solid var(--edge2);font:700 11px/1 var(--mono);letter-spacing:.14em;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.led{width:8px;height:8px;border-radius:50%;background:#2b3036;box-shadow:inset 0 1px 1px rgba(0,0,0,.6);flex:none}
+.status[data-s="run"] .led{background:var(--lime);box-shadow:0 0 10px var(--lime)}
+.status[data-s="warn"] .led{background:var(--amber);box-shadow:0 0 10px var(--amber);animation:blink .5s steps(2) infinite}
+.status[data-s="hot"] .led{background:var(--ember);box-shadow:0 0 12px var(--ember)}
+.status[data-s="ion"] .led{background:var(--violet);box-shadow:0 0 12px var(--violet)}
+@keyframes blink{50%{opacity:.25}}
+.xpill{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 9px;border-radius:12px;background:rgba(10,12,14,.72);border:1px solid var(--edge2);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:border-color .5s var(--ease)}
+.xpill svg{width:46px;height:22px;flex:none}
+.xpill svg path{transition:d .6s var(--ease)}
+.xpill b{display:block;font-size:13px;font-weight:600}
+.xpill span{display:block;font:400 10.5px/1.3 var(--mono);color:var(--muted);margin-top:2px}
+.xpill[data-x="over"]{border-color:rgba(255,178,62,.55)} .xpill[data-x="over"] b{color:var(--amber)}
+.xpill[data-x="ideal"]{border-color:rgba(200,255,60,.55)} .xpill[data-x="ideal"] b{color:var(--lime)}
+.xpill[data-x="under"],.xpill[data-x="vac"]{border-color:rgba(67,211,255,.5)} .xpill[data-x="under"] b,.xpill[data-x="vac"] b{color:var(--cyan)}
+.xpill[data-x="ion"]{border-color:rgba(171,140,255,.55)} .xpill[data-x="ion"] b{color:var(--violet)}
+.xpill[data-x="sep"]{border-color:rgba(255,90,79,.6)} .xpill[data-x="sep"] b{color:var(--red)}
+
+.steps{position:absolute;z-index:6;left:18px;bottom:16px;right:180px;display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.steps button{display:flex;align-items:center;gap:8px;padding:7px 11px 7px 7px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--edge2);background:rgba(10,12,14,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  font-size:12px;color:var(--muted);transition:all .4s var(--ease)}
+.steps button b{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#1b2025;font:700 10px var(--mono);color:var(--text);transition:all .4s var(--ease)}
+.steps button:hover{color:var(--text);border-color:rgba(255,255,255,.25)}
+.steps button.on{color:var(--text);border-color:rgba(200,255,60,.5)}
+.steps button.on b{background:var(--lime);color:#0b0d05;box-shadow:0 0 12px var(--lime-glow)}
+.steps button[aria-pressed="true"]{border-color:var(--lime);color:var(--text)}
+.steps button:focus-visible,.viewbtn:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+
+.badge{position:absolute;z-index:6;right:16px;bottom:16px;padding:6px 10px;border-radius:6px;font:700 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  color:#0b0d05;background:var(--lime);box-shadow:0 0 18px var(--lime-glow)}
+.viewbtn{position:absolute;z-index:6;right:16px;bottom:50px;padding:7px 11px;border-radius:999px;border:1px solid var(--edge2);background:rgba(10,12,14,.7);
+  font:700 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);cursor:pointer;opacity:0;pointer-events:none;transition:opacity .4s}
+.viewbtn.show{opacity:1;pointer-events:auto}
+
+.labels{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden}
+.lbl{position:absolute;left:0;top:0;will-change:transform;opacity:0;transition:opacity .5s var(--ease)}
+.lbl.in{opacity:1}
+.lbl i{position:absolute;left:-3px;top:-3px;width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime)}
+.lbl::before{content:"";position:absolute;left:0;bottom:0;width:26px;height:26px;border-left:1px solid rgba(255,255,255,.35);border-top:1px solid rgba(255,255,255,.35);transform-origin:0 100%;transform:skewX(42deg) translate(0,0);}
+.lbl span{position:absolute;left:22px;bottom:20px;white-space:nowrap;font:500 12px/1.2 'Space Grotesk';padding:4px 8px;border-radius:6px;background:rgba(8,10,12,.78);border:1px solid var(--edge2);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.lbl span em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--lime);margin-left:6px}
+.lbl.dn::before{bottom:auto;top:0;border-top:0;border-bottom:1px solid rgba(255,255,255,.35);transform:skewX(-42deg);transform-origin:0 0}
+.lbl.dn span{bottom:auto;top:20px}
+.lbl.c-fuel i{background:var(--ember);box-shadow:0 0 8px var(--ember)} .lbl.c-lox i{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.lbl.c-ion i{background:var(--violet);box-shadow:0 0 8px var(--violet)} .lbl.c-hot i{background:#ffd27a;box-shadow:0 0 8px #ffb347}
+
+/* ---------- Prüflinge ---------- */
+.specimens{padding:16px 20px 20px;border-top:1px solid var(--edge);background:linear-gradient(180deg,#0a0c0e,#07080a)}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
+.sec-head h2{font:700 11px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.sec-head p{font-size:12.5px;color:var(--dim)}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.card{position:relative;display:flex;gap:12px;align-items:center;text-align:left;padding:12px 14px 12px 12px;border-radius:14px;cursor:pointer;
+  background:linear-gradient(180deg,#12161a,#0d1013);border:1px solid var(--edge);transition:border-color .45s var(--ease),transform .45s var(--ease),box-shadow .45s var(--ease);min-width:0}
+.card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.16)}
+.card:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.card[aria-pressed="true"]{border-color:rgba(200,255,60,.6);box-shadow:0 0 0 1px rgba(200,255,60,.25),0 12px 36px -16px var(--lime-glow);background:linear-gradient(180deg,#151b13,#0d110b)}
+.card svg{width:46px;height:46px;flex:none;color:#7c848c;transition:color .45s}
+.card[aria-pressed="true"] svg{color:var(--lime)}
+.card .c-no{font:700 10px var(--mono);color:var(--dim);letter-spacing:.1em}
+.card .c-name{font-size:15px;font-weight:600;letter-spacing:-.01em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .c-sub{font-size:11.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .c-led{position:absolute;top:11px;right:11px;width:6px;height:6px;border-radius:50%;background:#262b30}
+.card[aria-pressed="true"] .c-led{background:var(--lime);box-shadow:0 0 8px var(--lime)}
+.card>div{min-width:0}
+.about{margin-top:14px;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;padding:14px 16px;border-radius:12px;background:#0b0e10;border:1px solid var(--edge)}
+.about .tag{font:700 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;padding:6px 8px;border-radius:6px;background:#161b20;color:var(--lime);white-space:nowrap}
+.about p{font-size:14px;line-height:1.55;color:#c9cdd0;max-width:80ch}
+
+/* ---------- Rack ---------- */
+.rack{position:sticky;top:64px;height:calc(100svh - 64px);overflow-y:auto;overscroll-behavior:contain;padding:14px;display:flex;flex-direction:column;gap:12px;
+  border-left:1px solid var(--edge);background:
+  repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px),linear-gradient(180deg,#0d1013,#090b0d);scrollbar-width:thin;scrollbar-color:#2a3036 transparent}
+.module{position:relative;border-radius:14px;padding:14px 16px 16px;background:linear-gradient(180deg,#14181c,#0f1215);
+  border:1px solid var(--edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 30px -18px #000}
+.module::before,.module::after{content:"";position:absolute;top:9px;width:5px;height:5px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#59606a,#1d2125);box-shadow:inset 0 0 0 .5px rgba(0,0,0,.6)}
+.module::before{left:9px}.module::after{right:9px}
+.mod-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 8px 12px}
+.mod-head h3{font:700 10.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.mod-head .mini{font:400 10.5px/1 var(--mono);color:var(--dim)}
+
+.lcd{border-radius:10px;padding:12px 14px 12px;background:radial-gradient(120% 140% at 0 0,#0d130a,#060806);border:1px solid #1b2216;
+  box-shadow:inset 0 2px 10px rgba(0,0,0,.8)}
+.lcd-row{display:flex;justify-content:space-between;align-items:center;font:700 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#6f8a3a}
+.lcd-big{display:flex;align-items:baseline;gap:8px;margin-top:6px;font-family:var(--mono);color:var(--lime);text-shadow:0 0 14px rgba(200,255,60,.45)}
+.lcd-big b{font-size:clamp(40px,5vw,54px);font-weight:700;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.lcd-big small{font-size:15px;color:#9fcf2f}
+.lcd.off .lcd-big{color:#3d4c22;text-shadow:none}
+.meter{display:grid;grid-template-columns:repeat(24,1fr);gap:3px;margin-top:10px;height:10px}
+.meter i{border-radius:2px;background:#1a2014;transition:background .12s,box-shadow .12s}
+.meter i.on{background:var(--lime);box-shadow:0 0 6px var(--lime-glow)}
+.meter i.on.w{background:var(--amber);box-shadow:0 0 6px rgba(255,178,62,.5)}
+.meter i.on.h{background:var(--ember);box-shadow:0 0 6px var(--ember-glow)}
+.ro-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.ro{padding:9px 11px;border-radius:9px;background:#0b0d10;border:1px solid var(--edge)}
+.ro-k{display:block;font-size:11px;color:var(--muted)}
+.ro-v{display:block;margin-top:3px;font:400 12px var(--mono);color:var(--dim)}
+.ro-v b{font-size:17px;color:var(--text);font-weight:700;font-variant-numeric:tabular-nums}
+
+.ignite{position:relative;width:100%;border:0;cursor:pointer;border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:14px;text-align:left;
+  background:linear-gradient(180deg,#2a1308,#170a05);box-shadow:inset 0 0 0 1px rgba(255,107,44,.55),inset 0 1px 0 rgba(255,255,255,.08),0 12px 30px -14px var(--ember-glow);
+  transition:transform .2s var(--ease),box-shadow .4s var(--ease),background .4s}
+.ignite:hover{box-shadow:inset 0 0 0 1px rgba(255,107,44,.9),inset 0 1px 0 rgba(255,255,255,.1),0 14px 40px -12px var(--ember-glow)}
+.ignite:active{transform:scale(.985)}
+.ignite:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
+.ig-ring{position:relative;width:46px;height:46px;border-radius:50%;flex:none;background:radial-gradient(circle,#ff9a5c 0 22%,#7a2a0b 23% 30%,#1b0c06 31%);
+  box-shadow:0 0 0 2px #3a1a0c,0 0 20px var(--ember-glow)}
+.ig-ring::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1.5px dashed rgba(255,107,44,.5);animation:spin 9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ig-t b{display:block;font-size:20px;font-weight:700;letter-spacing:.02em}
+.ig-t span{display:block;font:400 11px/1.35 var(--mono);color:#d7a58a;margin-top:3px}
+.ignite.is-run{background:linear-gradient(180deg,#141a0c,#0c1007);box-shadow:inset 0 0 0 1px rgba(200,255,60,.5),inset 0 1px 0 rgba(255,255,255,.06),0 12px 30px -16px var(--lime-glow)}
+.ignite.is-run .ig-ring{background:radial-gradient(circle,#d9ff7a 0 22%,#4b6612 23% 30%,#0e1306 31%);box-shadow:0 0 0 2px #26330c,0 0 20px var(--lime-glow)}
+.ignite.is-run .ig-ring::after{border-color:rgba(200,255,60,.55);animation-duration:1.4s}
+.ignite.is-run .ig-t span{color:#a9c37a}
+.ignite.is-ion{background:linear-gradient(180deg,#1a1230,#0d0919);box-shadow:inset 0 0 0 1px rgba(171,140,255,.55),0 12px 30px -14px rgba(171,140,255,.45)}
+.ignite.is-ion .ig-ring{background:radial-gradient(circle,#d9ccff 0 22%,#4b3a8a 23% 30%,#120d22 31%);box-shadow:0 0 0 2px #2a2050,0 0 20px rgba(171,140,255,.45)}
+.ignite.is-ion .ig-ring::after{border-color:rgba(171,140,255,.6)}
+.ignite.is-ion .ig-t span{color:#b9a9e6}
+.ignite:disabled{cursor:not-allowed;filter:saturate(.7)}
+.ignite.is-burn{background:linear-gradient(180deg,#2b1206,#160803);box-shadow:inset 0 0 0 1px rgba(255,178,62,.6)}
+.ignite.is-burn .ig-ring::after{animation-duration:.8s;border-color:var(--amber)}
+
+/* Fader */
+.fader{position:relative;padding:12px 4px 4px;border-top:1px solid var(--edge)}
+.fader:first-of-type{border-top:0;padding-top:2px}
+.f-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.f-head label{font-size:14px;font-weight:600;letter-spacing:-.005em}
+.f-val{font:700 12px/1 var(--mono);color:var(--lime);padding:6px 8px;border-radius:6px;background:#070906;border:1px solid #1d2416;min-width:74px;text-align:right;
+  text-shadow:0 0 10px rgba(200,255,60,.35);font-variant-numeric:tabular-nums;white-space:nowrap}
+.f-track{position:relative;margin-top:6px}
+.f-ticks{position:absolute;left:11px;right:11px;top:31px;height:6px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.18) 0 1px,transparent 1px calc(10% - .1px));}
+.f-ticks::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.3) 0 1px,transparent 1px calc(50% - .5px));height:9px;top:-1px}
+.f-opt{position:absolute;top:2px;width:2px;height:10px;margin-left:-1px;background:var(--lime);box-shadow:0 0 6px var(--lime);pointer-events:none;opacity:.8;transition:left .6s var(--ease)}
+.fader input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:44px;margin:0;background:transparent;cursor:pointer;--p:50%}
+.fader input[type=range]:focus{outline:none}
+.fader input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:6px;
+  background:linear-gradient(90deg,var(--acc) 0 var(--p),#040506 var(--p) 100%);box-shadow:inset 0 1px 3px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.06)}
+.fader input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:40px;margin-top:-16px;border-radius:6px;
+  background:linear-gradient(90deg,transparent 10px,var(--acc) 10px 14px,transparent 14px),linear-gradient(180deg,#4a5059,#23272c 46%,#30353b 54%,#15181b);
+  border:1px solid #5d646d;box-shadow:0 8px 16px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.22);transition:transform .2s var(--ease)}
+.fader input[type=range]:active::-webkit-slider-thumb{transform:scale(1.06)}
+.fader input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px rgba(200,255,60,.55),0 8px 16px rgba(0,0,0,.7)}
+.fader input[type=range]::-moz-range-track{height:8px;border-radius:6px;background:#040506;box-shadow:inset 0 1px 3px rgba(0,0,0,.9)}
+.fader input[type=range]::-moz-range-progress{height:8px;border-radius:6px;background:var(--acc)}
+.fader input[type=range]::-moz-range-thumb{width:22px;height:38px;border-radius:6px;border:1px solid #5d646d;
+  background:linear-gradient(90deg,transparent 9px,var(--acc) 9px 13px,transparent 13px),linear-gradient(180deg,#4a5059,#23272c 46%,#30353b 54%,#15181b);box-shadow:0 8px 16px rgba(0,0,0,.7)}
+.fader input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 3px rgba(200,255,60,.55)}
+.f-scale{display:flex;justify-content:space-between;font:400 10px/1 var(--mono);color:var(--dim);margin-top:2px;letter-spacing:.04em}
+.f-help{font-size:12.5px;line-height:1.5;color:#9aa1a7;margin-top:8px}
+.f-lock{display:none;align-items:center;gap:7px;margin-top:8px;font:700 10.5px/1.2 var(--mono);color:var(--amber);letter-spacing:.06em;text-transform:uppercase}
+.f-lock svg{width:12px;height:12px;flex:none}
+.f-tip{position:absolute;left:4px;right:4px;bottom:calc(100% - 6px);z-index:10;padding:10px 12px;border-radius:10px;font-size:12.5px;line-height:1.45;color:#f4ede4;
+  background:#2a1a0e;border:1px solid rgba(255,178,62,.45);box-shadow:0 14px 30px -8px rgba(0,0,0,.8);opacity:0;transform:translateY(6px);pointer-events:none;transition:all .3s var(--ease)}
+.f-tip::after{content:"";position:absolute;left:28px;top:100%;border:7px solid transparent;border-top-color:#2a1a0e}
+.fader.locked{--acc:#5d4524}
+.fader.locked .f-lock{display:flex}
+.fader.locked input{cursor:not-allowed;opacity:.55}
+.fader.locked .f-val{color:#7d6a4c;text-shadow:none}
+.fader.locked:hover .f-tip,.fader.locked:focus-within .f-tip,.fader.locked:focus .f-tip,.fader.locked.tip .f-tip{opacity:1;transform:none}
+.fader.locked:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:8px}
+
+.place{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;padding:4px;border-radius:12px;background:#08090b;border:1px solid var(--edge)}
+.place button{border:0;border-radius:9px;padding:10px 8px;background:transparent;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:all .35s var(--ease)}
+.place button[aria-pressed="true"]{background:#1b2117;color:var(--lime);box-shadow:inset 0 0 0 1px rgba(200,255,60,.4)}
+.place button:disabled{cursor:not-allowed;opacity:.45}
+.place-h{font-size:14px;font-weight:600;margin-top:10px}
+
+/* collapsible level blocks */
+.rv{display:grid;grid-template-rows:1fr;opacity:1;transition:grid-template-rows .55s var(--ease),opacity .45s var(--ease)}
+.rv>.rv-in{min-height:0;overflow:hidden}
+.rv.hide{grid-template-rows:0fr;opacity:0}
+.rv.hide>.rv-in{visibility:hidden}
+
+.chart-wrap{position:relative;height:132px;border-radius:10px;background:#07090a;border:1px solid var(--edge);overflow:hidden}
+.chart-wrap canvas{width:100%;height:100%;display:block}
+
+.explain p{font-size:14.5px;line-height:1.58;color:#d4d8d4}
+.explain p+p{margin-top:8px}
+.explain .big{font-size:20px;line-height:1.3;font-weight:600;letter-spacing:-.015em;color:var(--text)}
+.explain b{color:var(--lime);font-weight:600}
+.explain .warn{color:var(--amber)}
+.explain .k{font-family:var(--mono);font-size:12.5px;color:var(--lime)}
+
+.fx{padding:11px 12px;border-radius:10px;background:#07090a;border:1px solid var(--edge);font-family:var(--mono)}
+.fx+.fx{margin-top:8px}
+.fx-l{font:700 9.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.fx-eq{font-size:15px;color:var(--text);margin-top:7px;letter-spacing:-.01em}
+.fx-sub{font-size:12px;color:#a2a9ae;margin-top:5px;line-height:1.55;word-break:break-word}
+.fx-sub b,.fx-res b{color:var(--lime);font-weight:700}
+.fx-res{font-size:13px;margin-top:4px;color:#c8ccc9}
+.fx .neg{color:var(--amber)} .fx .pos{color:var(--cyan)}
+.foot{font:400 10.5px/1.5 var(--mono);color:var(--dim);padding:2px 6px 8px}
+
+@media (max-width:1100px){ .layout{grid-template-columns:minmax(0,1fr) 360px} }
+@media (max-width:980px){
+  .top{position:relative;height:auto;flex-wrap:wrap;padding:12px 16px}
+  .levels{width:100%}
+  .levels button{flex:1;padding:9px 6px}
+  .layout{grid-template-columns:1fr}
+  .stage{height:64svh;min-height:400px;max-height:720px}
+  .rack{position:static;height:auto;overflow:visible;border-left:0;border-top:1px solid var(--edge);padding:14px 16px 20px}
+  .specimens{padding:14px 16px 16px}
+}
+@media (max-width:760px){ .cards{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:600px){
+  .hud-tl{top:14px;left:16px;max-width:62%}
+  .hud-ex{display:none}
+  .hud-tr{top:12px;right:12px}
+  .xpill{padding:6px 9px 6px 7px}
+  .xpill svg{width:34px}
+  .xpill span{display:none}
+  .steps{left:12px;right:12px;bottom:12px}
+  .steps button{padding:5px 9px 5px 5px;font-size:11px}
+  .steps button:not(.on) span{display:none}
+  .steps{right:136px}
+  .badge{right:12px;bottom:12px}
+  .viewbtn{right:12px;bottom:44px}
+  .lbl.minor{display:none}
+  .lbl span{font-size:10.5px;left:16px;bottom:16px;padding:3px 6px}
+  .lbl::before{width:20px;height:20px}
+  .lbl.dn span{top:16px}
+  .card{padding:10px;gap:9px}
+  .card svg{width:34px;height:34px}
+  .card .c-name{font-size:13.5px}
+  .about{grid-template-columns:1fr;gap:10px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}
+}
+.noscript{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted);z-index:9}
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body data-level="2">
+<header class="top">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <div><div class="eyebrow">Raketentriebwerke · Labor</div><h1>Prüfstand <span>/ Hands-on</span></h1></div>
+  </div>
+  <div class="levels" id="levels" role="radiogroup" aria-label="Verständnisstufe">
+    <span class="lv-pill" id="lvPill" aria-hidden="true"></span>
+    <button role="radio" data-level="1" aria-checked="false"><span class="lv-n">1</span>Einsteiger</button>
+    <button role="radio" data-level="2" aria-checked="true"><span class="lv-n">2</span>Fortgeschritten</button>
+    <button role="radio" data-level="3" aria-checked="false"><span class="lv-n">3</span>Experte</button>
+  </div>
+</header>
+
+<main class="layout">
+  <div class="col-main">
+    <section class="stage" id="stage" aria-label="3D-Prüfstand">
+      <canvas id="gl" aria-label="Triebwerk auf dem Prüfstand – ziehen zum Drehen"></canvas>
+      <div class="labels" id="labels" aria-hidden="true"></div>
+      <div class="flash" id="flash" aria-hidden="true"></div>
+      <div class="hud hud-tl">
+        <div class="hud-kicker" id="hudKicker">Prüfling 02 · Gasgenerator</div>
+        <div class="hud-name" id="hudName">Merlin 1D</div>
+        <div class="hud-ex" id="hudEx">SpaceX · RP-1 + Flüssigsauerstoff</div>
+      </div>
+      <div class="hud hud-tr">
+        <div class="status" id="status" data-s="off" role="status" aria-live="polite"><i class="led"></i><span id="statusTxt">BEREIT</span></div>
+        <div class="xpill" id="xpill" data-x="over">
+          <svg viewBox="0 0 46 22" aria-hidden="true"><path d="M2 7 L8 7 L8 15 L2 15 Z" fill="#5c636b"/><path id="xpath" d="M8 7 C20 9 30 9 44 9 L44 13 C30 13 20 13 8 15 Z" fill="currentColor" opacity=".85"/></svg>
+          <div><b id="xName">Überexpandiert</b><span id="xSub">pₑ &lt; pₐ</span></div>
+        </div>
+      </div>
+      <ol class="steps" id="steps" aria-label="Funktionsablauf – antippen zum Heranfahren"></ol>
+      <button class="viewbtn" id="viewReset" type="button">Gesamtansicht</button>
+      <div class="badge">Variante C · Prüfstand</div>
+    </section>
+
+    <section class="specimens" aria-labelledby="pl-h">
+      <div class="sec-head"><h2 id="pl-h">Prüflinge</h2><p>Triebwerk wählen – es wird auf den Prüfstand montiert</p></div>
+      <div class="cards" id="cards"></div>
+      <div class="about"><span class="tag" id="aboutTag">Gasgenerator</span><p id="aboutTxt"></p></div>
+    </section>
+  </div>
+
+  <aside class="rack" aria-label="Bedienpult">
+    <section class="module">
+      <div class="mod-head"><h3>Messwerte</h3><span class="mini" id="roMode">Kraftmessdose</span></div>
+      <div class="lcd off" id="lcd">
+        <div class="lcd-row"><span data-t1="Schub – so fest drückt es" data-t2="Schub F">Schub F</span><span id="roTag">live</span></div>
+        <div class="lcd-big"><b id="roF">0</b><small id="roFU">kN</small></div>
+        <div class="meter" id="meter" aria-hidden="true"></div>
+      </div>
+      <div class="ro-grid">
+        <div class="ro"><span class="ro-k" data-t1="Sparsamkeit (Isp)" data-t2="Spezifischer Impuls Isp">Spezifischer Impuls Isp</span><span class="ro-v"><b id="roIsp">–</b> s</span></div>
+        <div class="ro"><span class="ro-k" id="roPcK">Kammerdruck pᶜ</span><span class="ro-v"><b id="roPc">–</b> <span id="roPcU">bar</span></span></div>
+        <div class="rv" data-min="3"><div class="rv-in"><div class="ro"><span class="ro-k">Massenstrom ṁ</span><span class="ro-v"><b id="roMd">–</b> <span id="roMdU">kg/s</span></span></div></div></div>
+        <div class="rv" data-min="3"><div class="rv-in"><div class="ro"><span class="ro-k" id="roPeK">Austrittsdruck pₑ</span><span class="ro-v"><b id="roPe">–</b> <span id="roPeU">bar</span></span></div></div></div>
+      </div>
+    </section>
+
+    <button class="ignite" id="ignite" type="button">
+      <span class="ig-ring" aria-hidden="true"></span>
+      <span class="ig-t"><b id="igMain">Zünden</b><span id="igSub">Vorkühlen → Zündung → Hochlauf</span></span>
+    </button>
+
+    <section class="module" aria-label="Regler">
+      <div class="mod-head"><h3>Regler</h3><span class="mini" id="ctlMini">4 Kanäle</span></div>
+
+      <div class="fader" id="fThr">
+        <div class="f-tip" role="tooltip" id="tipThr"></div>
+        <div class="f-head"><label for="inThr" id="lblThr">Gashebel / Drossel</label><output class="f-val" id="vThr" for="inThr">100 %</output></div>
+        <div class="f-track"><div class="f-ticks"></div><input type="range" id="inThr" min="40" max="100" step="1" value="100" aria-describedby="tipThr"></div>
+        <div class="f-scale"><span id="sThrA">40 %</span><span id="sThrB">100 %</span></div>
+        <div class="f-lock"><svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5" width="8" height="6" rx="1.2" fill="currentColor"/><path d="M4 5V3.6a2 2 0 0 1 4 0V5" stroke="currentColor" fill="none" stroke-width="1.3"/></svg><span id="lockThr">nicht abschaltbar</span></div>
+        <div class="rv" data-min="2"><div class="rv-in"><p class="f-help" id="hThr"></p></div></div>
+      </div>
+
+      <div class="rv" data-max="1"><div class="rv-in">
+        <div class="place-h">Wo testen wir?</div>
+        <div class="place" id="place">
+          <button type="button" data-p="0" aria-pressed="true">Auf der Erde</button>
+          <button type="button" data-p="100" aria-pressed="false">Im Weltall</button>
+        </div>
+        <p class="f-help" id="placeNote" style="margin-top:8px"></p>
+      </div></div>
+
+      <div class="rv" data-min="2"><div class="rv-in">
+        <div class="fader" id="fOF">
+          <div class="f-tip" role="tooltip" id="tipOF"></div>
+          <div class="f-head"><label for="inOF">Mischungsverhältnis O/F</label><output class="f-val" id="vOF" for="inOF">optimal</output></div>
+          <div class="f-track"><div class="f-ticks"></div><span class="f-opt" style="left:50%"></span><input type="range" id="inOF" min="70" max="130" step="1" value="100" aria-describedby="tipOF"></div>
+          <div class="f-scale"><span>brennstoffreich</span><span>Optimum</span><span>oxidatorreich</span></div>
+          <div class="f-lock"><svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5" width="8" height="6" rx="1.2" fill="currentColor"/><path d="M4 5V3.6a2 2 0 0 1 4 0V5" stroke="currentColor" fill="none" stroke-width="1.3"/></svg><span id="lockOF">festgelegt</span></div>
+          <p class="f-help" id="hOF"></p>
+        </div>
+        <div class="fader" id="fEps">
+          <div class="f-tip" role="tooltip" id="tipEps"></div>
+          <div class="f-head"><label for="inEps">Expansionsverhältnis ε</label><output class="f-val" id="vEps" for="inEps">16</output></div>
+          <div class="f-track"><div class="f-ticks"></div><span class="f-opt" id="optEps" style="left:30%"></span><input type="range" id="inEps" min="4" max="50" step="0.1" value="16.4" aria-describedby="tipEps"></div>
+          <div class="f-scale"><span id="sEpsA">4</span><span>Aₑ / A*</span><span id="sEpsB">50</span></div>
+          <div class="f-lock"><svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5" width="8" height="6" rx="1.2" fill="currentColor"/><path d="M4 5V3.6a2 2 0 0 1 4 0V5" stroke="currentColor" fill="none" stroke-width="1.3"/></svg><span id="lockEps">keine Düse</span></div>
+          <p class="f-help" id="hEps"></p>
+        </div>
+        <div class="fader" id="fPa">
+          <div class="f-tip" role="tooltip" id="tipPa"></div>
+          <div class="f-head"><label for="inPa">Umgebungsdruck pₐ</label><output class="f-val" id="vPa" for="inPa">1,01 bar</output></div>
+          <div class="f-track"><div class="f-ticks"></div><input type="range" id="inPa" min="0" max="100" step="0.5" value="0" aria-describedby="tipPa"></div>
+          <div class="f-scale"><span>Meereshöhe</span><span id="sPaMid">ca. 0 km</span><span>Vakuum</span></div>
+          <div class="f-lock"><svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5" width="8" height="6" rx="1.2" fill="currentColor"/><path d="M4 5V3.6a2 2 0 0 1 4 0V5" stroke="currentColor" fill="none" stroke-width="1.3"/></svg><span id="lockPa">nur Vakuum</span></div>
+          <p class="f-help" id="hPa"></p>
+        </div>
+      </div></div>
+    </section>
+
+    <section class="module explain">
+      <div class="mod-head"><h3 data-t1="Was passiert?" data-t2="Was passiert gerade?" data-t3="Analyse">Was passiert gerade?</h3><span class="mini" id="exMini"></span></div>
+      <div id="explain"></div>
+    </section>
+
+    <section class="module">
+      <div class="mod-head"><h3 data-t1="Schub-Kurve" data-t2="Schubverlauf F(t)">Schubverlauf F(t)</h3><span class="mini">letzte 15 s</span></div>
+      <div class="chart-wrap"><canvas id="chart" aria-label="Diagramm: Schub über der Zeit"></canvas></div>
+    </section>
+
+    <div class="rv" data-min="3"><div class="rv-in">
+      <section class="module">
+        <div class="mod-head"><h3>Formeln · live eingesetzt</h3><span class="mini" id="fxMini">Nennwerte</span></div>
+        <div id="formulas"></div>
+      </section>
+    </div></div>
+
+    <p class="foot">Vereinfachtes Modell: ideale Düsenströmung (isentrop, konstantes γ). Richtwerte aus dem Inhalts-Brief (Merlin 1D, Raptor, NSTAR) sind kalibriert; übrige Schubwerte sind Modellwerte. Feststoff-Brenndauer zeitlich gerafft.</p>
+  </aside>
+</main>
+
+<noscript><div class="noscript">Dieser Prüfstand braucht JavaScript und WebGL.</div></noscript>
+
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* =========================================================
+   Hilfsfunktionen
+   ========================================================= */
+const $ = (s) => document.querySelector(s);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const damp = (a, b, k, dt) => lerp(a, b, 1 - Math.exp(-k * dt));
+const nf = (v, d = 0) => (isFinite(v) ? v : 0).toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
+const G0 = 9.80665, P0 = 1.01325;
+
+const mqRM = window.matchMedia('(prefers-reduced-motion: reduce)');
+let RM = mqRM.matches;
+if (mqRM.addEventListener) mqRM.addEventListener('change', (e) => { RM = e.matches; });
+
+const Ease = {
+  inOut3: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
+  out3: (t) => 1 - Math.pow(1 - t, 3),
+  in3: (t) => t * t * t,
+  outBack: (t) => { const c1 = 1.5, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); },
+  outExpo: (t) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t)),
+};
+
+/* Kleine Tween-Engine (läuft im Render-Loop) */
+const tweens = [];
+function tween(target, to, opt = {}) {
+  for (const tw of tweens) if (tw.target === target) for (const k in to) delete tw.to[k];
+  const tw = {
+    target, to: Object.assign({}, to), from: null,
+    dur: RM ? 0.0001 : (opt.dur ?? 1), delay: RM ? 0 : (opt.delay ?? 0), t: 0,
+    ease: opt.ease || Ease.inOut3, onUpdate: opt.onUpdate, onComplete: opt.onComplete,
+  };
+  tweens.push(tw);
+  return tw;
+}
+function updateTweens(dt) {
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const tw = tweens[i];
+    if (tw.delay > 0) { tw.delay -= dt; continue; }
+    if (!tw.from) { tw.from = {}; for (const k in tw.to) tw.from[k] = tw.target[k]; }
+    tw.t += dt;
+    const p = Math.min(1, tw.t / tw.dur);
+    const e = tw.ease(p);
+    for (const k in tw.to) tw.target[k] = tw.from[k] + (tw.to[k] - tw.from[k]) * e;
+    if (tw.onUpdate) tw.onUpdate();
+    if (p >= 1) { tweens.splice(i, 1); if (tw.onComplete) tw.onComplete(); }
+  }
+}
+
+/* =========================================================
+   Triebwerksdaten (aus dem Inhalts-Brief)
+   ========================================================= */
+const ENG = {
+  solid: {
+    id: 'solid', no: '01', name: 'Feststoff-Booster', cycle: 'Feststofftriebwerk', tag: 'Feststoff',
+    example: 'Space-Shuttle-Booster (SRB) · SLS-Booster', card: 'SRB · SLS-Booster',
+    g: 1.18, pc: 60, cstar: 1515.6, At: 1.26, eps: 7.5, epsMin: 3, epsMax: 20, burn: 16,
+    vis: { injX: -6.4, cR: 0.9, cL: 5.4, tR: 0.32, domeH: 0.6 },
+    plume: { core: [1, 0.98, 0.93], mid: [1, 0.78, 0.42], edge: [1, 0.42, 0.13], soot: 0.5, dens: 1.35, light: 0xffa050 },
+    unit: { div: 1e6, u: 'MN', d: 2 }, outer: { c: 0xd7d4cc, m: 0.15, r: 0.62 },
+    txt: {
+      1: 'Wie eine riesige Wunderkerze in einem Rohr: Der Treibstoff ist fest und brennt von innen nach außen ab. Einmal gezündet, lässt er sich nicht mehr ausschalten.',
+      2: 'Der Treibstoff (z. B. APCP: Ammoniumperchlorat als Oxidator, Aluminiumpulver, HTPB-Kunststoff als Binder) ist als Treibsatz (Grain) ins Gehäuse gegossen. Ein Kanal in der Mitte brennt nach außen ab. Einfach, lagerfähig, enormer Schub – aber nicht abschaltbar und kaum regelbar.',
+      3: 'Schubverlauf über die Kanalgeometrie (Stern-, Zylinder-, Finocyl-Querschnitt) gesteuert, da Brennfläche × Abbrandrate den Massenstrom bestimmt. Abbrandrate r = a · pᶜⁿ (Saint-Robert/Vieille). Isp ca. 240–270 s (Vakuum).',
+    },
+  },
+  merlin: {
+    id: 'merlin', no: '02', name: 'Merlin 1D', cycle: 'Gasgenerator-Zyklus', tag: 'Gasgenerator',
+    example: 'SpaceX · RP-1 (Kerosin) + Flüssigsauerstoff', card: 'Gasgenerator · RP-1/LOX',
+    g: 1.22, pc: 100, cstar: 1708.6, At: 0.0525, eps: 16.4, epsMin: 4, epsMax: 50,
+    vis: { injX: -2.7, cR: 0.55, cL: 0.85, tR: 0.28, domeH: 0.32 },
+    plume: { core: [1, 0.96, 0.84], mid: [1, 0.62, 0.24], edge: [1, 0.3, 0.07], soot: 0.35, dens: 1.0, light: 0xff8a3d },
+    unit: { div: 1e3, u: 'kN', d: 0 }, outer: { c: 0x7e858d, m: 0.9, r: 0.33 },
+    txt: {
+      1: 'Zwei flüssige Zutaten werden mit starken Pumpen in eine Kammer gespritzt und verbrannt. Man kann das Triebwerk an- und ausschalten und stärker oder schwächer stellen.',
+      2: 'Eine Turbopumpe fördert Treibstoff und Oxidator mit hohem Druck zum Einspritzkopf. Ihre Turbine treibt ein kleiner Gasgenerator an, dessen Abgas ungenutzt über ein eigenes Rohr neben der Düse austritt. Die Düsenwand wird vom Treibstoff gekühlt (Regenerativkühlung).',
+      3: 'Offener Zyklus: Der Gasgenerator-Massenstrom (einige %) trägt kaum zum Schub bei → Isp-Verlust. Merlin 1D: Kammerdruck ca. 100 bar, Schub ca. 850 kN (Meereshöhe), Isp ca. 282 s (Meereshöhe) / ca. 311 s (Vakuum). Der brennstoffreiche Gasgenerator hält die Turbinentemperatur niedrig.',
+    },
+  },
+  raptor: {
+    id: 'raptor', no: '03', name: 'Raptor', cycle: 'Vollstrom-Stufenverbrennung', tag: 'Stufenverbrennung',
+    example: 'SpaceX · Methan + Flüssigsauerstoff (Full-Flow)', card: 'Stufenverbrennung · CH₄/LOX',
+    g: 1.2, pc: 300, cstar: 1829.1, At: 0.0396, eps: 36.5, epsMin: 8, epsMax: 90,
+    vis: { injX: -2.7, cR: 0.5, cL: 0.8, tR: 0.2, domeH: 0.3 },
+    plume: { core: [0.97, 0.95, 1], mid: [1, 0.6, 0.45], edge: [0.36, 0.42, 1], soot: 0.06, dens: 0.82, light: 0xc9a0ff },
+    unit: { div: 1e6, u: 'MN', d: 2 }, outer: { c: 0xa9aeb5, m: 0.92, r: 0.26 },
+    txt: {
+      1: 'Wie der Gasgenerator, aber nichts wird verschwendet: Auch das Gas, das die Pumpen antreibt, landet am Ende in der Brennkammer und schiebt mit.',
+      2: 'Ein Vorbrenner verbrennt einen Teil der Treibstoffe und treibt damit die Turbine an – das heiße, noch brennbare Gas wird danach in die Hauptbrennkammer geleitet. Höherer Druck, höhere Effizienz, aber technisch deutlich schwieriger.',
+      3: 'Full-Flow Staged Combustion: zwei Vorbrenner – einer brennstoffreich (treibt die Methanpumpe), einer sauerstoffreich (treibt die LOX-Pumpe); beide Ströme werden vollständig gasförmig eingespritzt. Raptor: Kammerdruck ca. 300 bar, Isp ca. 327 s (Meereshöhe) / ca. 350 s (Vakuum). Oxidatorreiches Heißgas greift Metalle an → Speziallegierungen.',
+    },
+  },
+  ion: {
+    id: 'ion', no: '04', name: 'Ionentriebwerk', cycle: 'Elektrischer Antrieb', tag: 'Elektrisch',
+    example: 'NASA Dawn (NSTAR) · ESA BepiColombo · Xenon', card: 'NSTAR · Xenon',
+    ion: true, Fmax: 0.092, isp: 3100, Pmax: 2.3,
+    vis: { injX: -1.6, cR: 0.95, cL: 1.3, tR: 0.95, domeH: 0.15 },
+    plume: { core: [0.93, 0.88, 1], mid: [0.6, 0.45, 1], edge: [0.26, 0.2, 0.85], soot: 0, dens: 0.5, light: 0x8f6bff },
+    unit: { div: 1e-3, u: 'mN', d: 1 }, outer: { c: 0xb5a46a, m: 0.75, r: 0.38 },
+    txt: {
+      1: 'Statt Feuer wird Gas elektrisch aufgeladen und mit einem Spannungsgitter extrem schnell nach hinten geschossen. Der Schub ist so sanft wie das Gewicht eines Blatt Papiers – aber er hält monatelang an.',
+      2: 'Das Edelgas Xenon wird durch Elektronenstöße ionisiert. Zwei Gitter mit hoher Spannung beschleunigen die positiven Ionen auf ca. 30–40 km/s. Ein Neutralisator gibt Elektronen in den Strahl, damit sich das Raumfahrzeug nicht elektrisch auflädt. Funktioniert nur im Vakuum.',
+      3: 'Isp ca. 3000 s (NSTAR ca. 3100 s), Schub ca. 0,09 N (NSTAR max. ca. 92 mN) bei ca. 2,3 kW. Schub begrenzt durch Raumladung (Child-Langmuir-Gesetz). Dawn sammelte über ca. 11 Jahre ca. 11 km/s Δv.',
+    },
+  },
+};
+const ORDER = ['solid', 'merlin', 'raptor', 'ion'];
+const ICONS = {
+  solid: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="17" width="26" height="14" rx="6"/><path d="M31 21h3l7-5v16l-7-5h-3"/><path d="M11 24h14" stroke-dasharray="2 3"/></svg>',
+  merlin: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="13" r="4"/><circle cx="9" cy="35" r="4"/><path d="M13 13c5 0 6 8 9 9M13 35c5 0 6-8 9-9"/><rect x="20" y="19" width="8" height="10" rx="3"/><path d="M28 22h2l12-8v20l-12-8h-2"/><path d="M24 12h14" /></svg>',
+  raptor: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="9" width="9" height="7" rx="2"/><rect x="5" y="32" width="9" height="7" rx="2"/><path d="M14 12.5c5 0 5 9 8 9.5M14 35.5c5 0 5-9 8-9.5"/><rect x="20" y="19" width="8" height="10" rx="3"/><path d="M28 22h2l13-9v22l-13-9h-2"/></svg>',
+  ion: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="8" y="14" width="16" height="20" rx="3"/><path d="M26 14v20M29 14v20"/><path d="M33 20h10M33 24h12M33 28h10" stroke-dasharray="2 2.5"/><circle cx="29" cy="9" r="2"/></svg>',
+};
+
+/* =========================================================
+   Physik: ideale Lavaldüse
+   ========================================================= */
+const machCache = new Map();
+function exitMach(eps, g) {
+  const key = eps.toFixed(2) + '|' + g;
+  const c = machCache.get(key);
+  if (c !== undefined) return c;
+  let lo = 1.0001, hi = 15;
+  for (let i = 0; i < 50; i++) {
+    const M = (lo + hi) / 2;
+    const a = (1 / M) * Math.pow((2 / (g + 1)) * (1 + ((g - 1) / 2) * M * M), (g + 1) / (2 * (g - 1)));
+    if (a < eps) lo = M; else hi = M;
+  }
+  const M = (lo + hi) / 2;
+  if (machCache.size > 4000) machCache.clear();
+  machCache.set(key, M);
+  return M;
+}
+function perf(E, thr, ofm, eps, pa) {
+  if (E.ion) {
+    const F = E.Fmax * thr, ve = E.isp * G0;
+    return { F, Fm: F, Fp: 0, isp: thr > 0 ? E.isp : 0, md: F / ve, ve, pe: 0, pc: 0, Me: 0, Ae: 0, P: E.Pmax * thr, cstar: 0 };
+  }
+  const g = E.g;
+  const pc = E.pc * thr;
+  const cstar = E.cstar * (1 - 0.45 * (ofm - 1) * (ofm - 1));
+  const Me = exitMach(eps, g);
+  const pr = Math.pow(1 + ((g - 1) / 2) * Me * Me, -g / (g - 1));
+  const pe = pc * pr;
+  const cfm = Math.sqrt(((2 * g * g) / (g - 1)) * Math.pow(2 / (g + 1), (g + 1) / (g - 1)) * (1 - Math.pow(pr, (g - 1) / g)));
+  const md = (pc * 1e5 * E.At) / cstar;
+  const ve = cfm * cstar;
+  const Ae = eps * E.At;
+  const Fm = md * ve, Fp = (pe - pa) * 1e5 * Ae;
+  const F = Fm + Fp;
+  return { F, Fm, Fp, isp: md > 0 ? F / (md * G0) : 0, md, ve, pe, pc, Me, Ae, cstar };
+}
+function xState(E, p, pa) {
+  if (E.ion) return 'ion';
+  if (pa < 0.004) return 'vac';
+  const r = p.pe / pa;
+  if (r > 1.12) return 'under';
+  if (r < 0.4) return 'sep';
+  if (r < 0.89) return 'over';
+  return 'ideal';
+}
+function burnCurve(u) {
+  if (u >= 1 || u < 0) return 0;
+  const rise = smooth(0, 0.035, u), tail = 1 - smooth(0.84, 1, u);
+  const body = 1 - 0.13 * smooth(0.2, 0.42, u) + 0.1 * smooth(0.5, 0.7, u);
+  return rise * tail * body;
+}
+
+/* =========================================================
+   UI-Zustand
+   ========================================================= */
+const ui = { level: 2, engine: 'merlin', thr: 100, ofm: 1, eps: ENG.merlin.eps, alt: 0, altBeforeIon: 0, focus: -1 };
+const sim = { state: 'off', t: 0, ramp: 0, chill: 0, thrAct: 1, burnT: 0, flash: 0, shake: 0, ionGlow: 0, hv: 0, burnout: 0 };
+function paFromAlt(a) { if (a >= 99.5) return 0; return P0 * Math.exp(-(a / 100) * 80 / 8.4); }
+function altKm(a) { return (a / 100) * 80; }
+
+/* =========================================================
+   Renderer & Szene
+   ========================================================= */
+const stage = $('#stage');
+const canvas = $('#gl');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false });
+} catch (err) {
+  const d = document.createElement('div'); d.className = 'noscript'; d.textContent = 'WebGL ist in diesem Browser nicht verfügbar.'; stage.appendChild(d);
+  throw err;
+}
+let DPR_MAX = Math.min(window.devicePixelRatio || 1, 2);
+let dpr = DPR_MAX;
+renderer.setPixelRatio(dpr);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.localClippingEnabled = true;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x040506);
+scene.fog = new THREE.FogExp2(0x040506, 0.03);
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.2;
+
+const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, rt);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.85, 0.55, 0.82);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* ---------- Licht ---------- */
+scene.add(new THREE.HemisphereLight(0x2a3a4a, 0x050505, 0.35));
+const rim = new THREE.DirectionalLight(0x9ab8ff, 2.2); rim.position.set(-6, 7, -9); scene.add(rim);
+const key = new THREE.DirectionalLight(0xfff1e0, 0.55); key.position.set(4, 9, 7); scene.add(key);
+const plumeLight = new THREE.PointLight(0xff8a3d, 0, 30, 1.6); plumeLight.position.set(1, 0, 0); scene.add(plumeLight);
+const flashLight = new THREE.PointLight(0xffe2b0, 0, 25, 1.4); scene.add(flashLight);
+
+/* ---------- Boden & Halle ---------- */
+const FLOOR_Y = -2.4;
+function makeFloorTex() {
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const x = c.getContext('2d');
+  x.fillStyle = '#121416'; x.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 9000; i++) { const v = 14 + Math.random() * 14; x.fillStyle = 'rgba(' + v + ',' + v + ',' + (v + 2) + ',0.55)'; x.fillRect(Math.random() * 512, Math.random() * 512, 1.5, 1.5); }
+  x.strokeStyle = '#07080a'; x.lineWidth = 3; x.strokeRect(0, 0, 512, 512);
+  x.strokeStyle = 'rgba(200,255,60,0.10)'; x.lineWidth = 2; x.setLineDash([18, 14]); x.beginPath(); x.moveTo(0, 256); x.lineTo(512, 256); x.stroke();
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(10, 10); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return t;
+}
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), new THREE.MeshStandardMaterial({ map: makeFloorTex(), color: 0x9a9a9a, metalness: 0.35, roughness: 0.55 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = FLOOR_Y; scene.add(floor);
+
+const glowMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { uX0: { value: 0 }, uLen: { value: 8 }, uI: { value: 0 }, uCol: { value: new THREE.Color(0xff8a3d) } },
+  vertexShader: 'varying vec3 vW; void main(){ vec4 w = modelMatrix*vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix*viewMatrix*w; }',
+  fragmentShader: [
+    'uniform float uX0; uniform float uLen; uniform float uI; uniform vec3 uCol; varying vec3 vW;',
+    'void main(){',
+    '  float dx = vW.x - uX0;',
+    '  float ax = dx < 0.0 ? dx*1.6 : max(0.0, dx - uLen*0.35)/(uLen*0.55);',
+    '  float g = exp(-ax*ax*2.0 - vW.z*vW.z*0.22) * (dx < 0.0 ? 0.6 : 1.0);',
+    '  gl_FragColor = vec4(uCol*g*uI*0.55, 1.0);',
+    '}'].join('\n'),
+});
+const glow = new THREE.Mesh(new THREE.PlaneGeometry(40, 16), glowMat);
+glow.rotation.x = -Math.PI / 2; glow.position.set(4, FLOOR_Y + 0.01, 0); scene.add(glow);
+
+// ferne Hallen-Lichtleisten
+const stripMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.32, 0.38, 0.42) });
+for (let i = 0; i < 9; i++) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.08, 5 + (i % 3), 0.08), stripMat);
+  m.position.set(-16 + i * 4.6, 1.8, -17 - (i % 2) * 2); scene.add(m);
+}
+const ceilMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.55, 0.6, 0.62) });
+for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.05, 0.12), ceilMat); m.position.set(-6 + i * 6, 7.2, -2); scene.add(m); }
+
+// Lichtkegel
+const coneMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  uniforms: { uA: { value: 0.07 } },
+  vertexShader: 'varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv=uv; vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }',
+  fragmentShader: 'uniform float uA; varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ float f = abs(dot(vN, vV)); float a = pow(vUv.y, 1.4) * f * f * uA; gl_FragColor = vec4(vec3(0.75,0.82,0.9)*a, 1.0); }',
+});
+for (const cx of [-4.5, 3.5]) {
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(3.2, 9.6, 48, 1, true), coneMat);
+  cone.position.set(cx, 7.2 - 4.8, -2); scene.add(cone);
+}
+
+// Staub
+const DUST = 380;
+{
+  const g = new THREE.BufferGeometry();
+  const p = new Float32Array(DUST * 3), s = new Float32Array(DUST);
+  for (let i = 0; i < DUST; i++) { p[i * 3] = -12 + Math.random() * 28; p[i * 3 + 1] = FLOOR_Y + Math.random() * 7.5; p[i * 3 + 2] = -7 + Math.random() * 12; s[i] = Math.random(); }
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('aSeed', new THREE.BufferAttribute(s, 1));
+  var dustMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uTime: { value: 0 }, uPx: { value: 600 }, uX: { value: 0 }, uI: { value: 0 }, uCol: { value: new THREE.Color(0xff8a3d) } },
+    vertexShader: [
+      'attribute float aSeed; uniform float uTime; uniform float uPx; uniform float uX; uniform float uI; uniform vec3 uCol;',
+      'varying vec3 vC; varying float vA;',
+      'void main(){',
+      '  vec3 p = position;',
+      '  p.y += sin(uTime*0.13 + aSeed*6.2831)*0.35;',
+      '  p.x += sin(uTime*0.07 + aSeed*12.0)*0.5 + uTime*0.03;',
+      '  p.x = mod(p.x + 12.0, 28.0) - 12.0;',
+      '  p.z += cos(uTime*0.09 + aSeed*7.0)*0.3;',
+      '  float dx = p.x - uX; float ax = dx < 0.0 ? -dx*1.4 : max(0.0, dx - 5.0)*0.4;',
+      '  float lit = uI * exp(-(ax*ax + dot(p.yz,p.yz))*0.08);',
+      '  vC = mix(vec3(0.3,0.34,0.38), uCol*2.2, clamp(lit,0.0,1.0));',
+      '  vA = 0.16 + lit*0.9;',
+      '  vec4 mv = modelViewMatrix*vec4(p,1.0);',
+      '  gl_PointSize = max(1.0, (0.018 + aSeed*0.03)*uPx / -mv.z);',
+      '  gl_Position = projectionMatrix*mv;',
+      '}'].join('\n'),
+    fragmentShader: 'varying vec3 vC; varying float vA; void main(){ vec2 c = gl_PointCoord-0.5; float d = length(c); if(d>0.5) discard; float a = 1.0 - d*2.0; gl_FragColor = vec4(vC*a*a*vA, 1.0); }',
+  });
+  scene.add(new THREE.Points(g, dustMat));
+}
+
+/* =========================================================
+   Materialien
+   ========================================================= */
+const cutPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 6);
+const CUT = [cutPlane];
+const M = {
+  steel: new THREE.MeshStandardMaterial({ color: 0x2b3036, metalness: 0.85, roughness: 0.42 }),
+  steel2: new THREE.MeshStandardMaterial({ color: 0x4a5058, metalness: 0.9, roughness: 0.3 }),
+  dark: new THREE.MeshStandardMaterial({ color: 0x15181b, metalness: 0.6, roughness: 0.5 }),
+  yellow: new THREE.MeshStandardMaterial({ color: 0xd8b21a, metalness: 0.3, roughness: 0.5 }),
+  loxTank: new THREE.MeshStandardMaterial({ color: 0xc3d9e6, metalness: 0.35, roughness: 0.38 }),
+  fuelTank: new THREE.MeshStandardMaterial({ color: 0xd9c4ab, metalness: 0.35, roughness: 0.42 }),
+  xeTank: new THREE.MeshStandardMaterial({ color: 0xa9a2c4, metalness: 0.6, roughness: 0.3 }),
+  pump: new THREE.MeshStandardMaterial({ color: 0x8b9199, metalness: 0.95, roughness: 0.22 }),
+  hotPart: new THREE.MeshStandardMaterial({ color: 0x6a4a3a, metalness: 0.8, roughness: 0.35, emissive: new THREE.Color(0x000000) }),
+  ledLime: new THREE.MeshBasicMaterial({ color: new THREE.Color(0.78, 1.0, 0.24).multiplyScalar(2.2) }),
+  lineFuel: new THREE.MeshStandardMaterial({ color: 0xff7a2f, emissive: 0xff5a14, emissiveIntensity: 0.35, metalness: 0.2, roughness: 0.25, transparent: true, opacity: 0.32, depthWrite: false }),
+  lineLox: new THREE.MeshStandardMaterial({ color: 0x43d3ff, emissive: 0x1aa6e0, emissiveIntensity: 0.35, metalness: 0.2, roughness: 0.25, transparent: true, opacity: 0.32, depthWrite: false }),
+  lineHotF: new THREE.MeshStandardMaterial({ color: 0xff9a5a, emissive: 0xff6a20, emissiveIntensity: 0.6, metalness: 0.2, roughness: 0.25, transparent: true, opacity: 0.36, depthWrite: false }),
+  lineHotO: new THREE.MeshStandardMaterial({ color: 0xbfeaff, emissive: 0x7fd8ff, emissiveIntensity: 0.6, metalness: 0.2, roughness: 0.25, transparent: true, opacity: 0.36, depthWrite: false }),
+  lineXe: new THREE.MeshStandardMaterial({ color: 0xab8cff, emissive: 0x6b4cff, emissiveIntensity: 0.4, metalness: 0.2, roughness: 0.25, transparent: true, opacity: 0.32, depthWrite: false }),
+  ringMetal: new THREE.MeshStandardMaterial({ color: 0x5d636b, metalness: 0.9, roughness: 0.3, clippingPlanes: CUT }),
+  magnet: new THREE.MeshStandardMaterial({ color: 0x9a6a3a, metalness: 0.85, roughness: 0.35, clippingPlanes: CUT }),
+  vac: new THREE.MeshStandardMaterial({ color: 0x3a4048, metalness: 0.8, roughness: 0.5, transparent: true, opacity: 0.55 }),
+};
+
+// Innenwand-Verläufe (Lathe-UV v: 0 = Einspritzkopf, 1 = Austritt)
+function gradTex(stops) {
+  const c = document.createElement('canvas'); c.width = 4; c.height = 256;
+  const x = c.getContext('2d'); const g = x.createLinearGradient(0, 256, 0, 0);
+  for (const s of stops) g.addColorStop(s[0], s[1]);
+  x.fillStyle = g; x.fillRect(0, 0, 4, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const texWarm = gradTex([[0, '#ffb070'], [0.2, '#ffd9a0'], [0.4, '#fff4dc'], [0.46, '#ffe7b0'], [0.7, '#ff7a2a'], [1, '#6a1404']]);
+const texSolid = gradTex([[0, '#8a7f78'], [0.22, '#ffb36a'], [0.25, '#ffe2b0'], [0.42, '#fff4dc'], [0.7, '#ff7a2a'], [1, '#5a1404']]);
+const texIon = gradTex([[0, '#3b2f7a'], [0.4, '#8f6bff'], [0.8, '#c9b6ff'], [1, '#efe8ff']]);
+
+const outerMat = new THREE.MeshStandardMaterial({ color: 0x7e858d, metalness: 0.9, roughness: 0.33, clippingPlanes: CUT, emissive: new THREE.Color(0) });
+const innerMat = new THREE.MeshBasicMaterial({ map: texWarm, side: THREE.BackSide, clippingPlanes: CUT, color: new THREE.Color(0.08, 0.08, 0.08) });
+const lipMat = new THREE.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.9, roughness: 0.3, clippingPlanes: CUT });
+
+/* =========================================================
+   Brennkammer + Düse: morphende Lathe-Geometrie
+   ========================================================= */
+const PN = 64, SEG = 80;
+const prof = Array.from({ length: PN }, () => new THREE.Vector2());
+const vis = Object.assign({}, ENG.merlin.vis, { eR: 1, nL: 1 });
+const geom = { total: 1, throatX: 0, exitX: 0, chamberEnd: 0 };
+function visTarget(E, eps) {
+  const v = E.vis;
+  const eR = E.ion ? v.cR : v.tR * Math.sqrt(eps);
+  return { injX: v.injX, cR: v.cR, cL: v.cL, tR: v.tR, domeH: v.domeH, eR, nL: E.ion ? 0.12 : (eR - v.tR) * 1.9 + 0.2 };
+}
+Object.assign(vis, visTarget(ENG.merlin, ENG.merlin.eps));
+
+function buildProfile() {
+  let i = 0;
+  const set = (r, y) => { prof[i].set(Math.max(r, 0.0005), y); i++; };
+  const rInj = vis.cR * 0.62;
+  set(0.0005, 0); set(rInj, 0);
+  for (let k = 1; k <= 8; k++) { const a = (k / 8) * Math.PI / 2; set(rInj + (vis.cR - rInj) * Math.sin(a), vis.domeH * (1 - Math.cos(a))); }
+  let y = vis.domeH;
+  for (let k = 1; k <= 6; k++) set(vis.cR, y + (vis.cL * k) / 6);
+  y += vis.cL;
+  geom.chamberEnd = y;
+  const cvL = Math.max(0, vis.cR - vis.tR) * 1.15 + 0.06;
+  for (let k = 1; k <= 12; k++) { const t = k / 12; const s = 0.5 - 0.5 * Math.cos(Math.PI * t); set(vis.cR + (vis.tR - vis.cR) * s, y + cvL * t); }
+  y += cvL;
+  geom.throatY = y;
+  for (let k = 1; k <= 36; k++) { const t = k / 36; const s = 1 - Math.pow(1 - t, 1.9); set(vis.tR + (vis.eR - vis.tR) * s, y + vis.nL * t); }
+  y += vis.nL;
+  geom.total = y;
+  geom.throatX = vis.injX + geom.throatY;
+  geom.exitX = vis.injX + y;
+}
+buildProfile();
+const nozGeo = new THREE.LatheGeometry(prof, SEG);
+const engineRoot = new THREE.Group(); scene.add(engineRoot);
+const nozOuter = new THREE.Mesh(nozGeo, outerMat);
+const nozInner = new THREE.Mesh(nozGeo, innerMat);
+for (const m of [nozOuter, nozInner]) { m.rotation.z = -Math.PI / 2; engineRoot.add(m); }
+const lip = new THREE.Mesh(new THREE.TorusGeometry(1, 0.03, 10, 96), lipMat);
+lip.rotation.y = Math.PI / 2; engineRoot.add(lip);
+
+// Radius-Lookup entlang x (für Partikel)
+const RLUT = new Float32Array(160);
+function updateLathe() {
+  buildProfile();
+  const pos = nozGeo.attributes.position;
+  for (let i = 0; i <= SEG; i++) {
+    const phi = (i / SEG) * Math.PI * 2, s = Math.sin(phi), c = Math.cos(phi);
+    for (let j = 0; j < PN; j++) { const p = prof[j]; pos.setXYZ(i * PN + j, p.x * s, p.y, p.x * c); }
+  }
+  pos.needsUpdate = true;
+  nozGeo.computeVertexNormals();
+  nozGeo.computeBoundingSphere();
+  nozOuter.position.x = nozInner.position.x = vis.injX;
+  lip.position.x = geom.exitX; lip.scale.set(vis.eR, vis.eR, 1);
+  let j = 1;
+  for (let k = 0; k < RLUT.length; k++) {
+    const y = (k / (RLUT.length - 1)) * geom.total;
+    while (j < PN - 1 && prof[j].y < y) j++;
+    const a = prof[j - 1], b = prof[j];
+    const t = b.y > a.y ? clamp((y - a.y) / (b.y - a.y), 0, 1) : 1;
+    RLUT[k] = lerp(a.x, b.x, t);
+  }
+}
+function radiusAtX(x) {
+  const y = x - vis.injX;
+  if (y <= 0) return vis.cR * 0.62;
+  if (y >= geom.total) return vis.eR;
+  const f = (y / geom.total) * (RLUT.length - 1);
+  const k = Math.floor(f);
+  return lerp(RLUT[k], RLUT[Math.min(k + 1, RLUT.length - 1)], f - k);
+}
+let profDirty = true;
+updateLathe();
+
+/* =========================================================
+   Abgasstrahl: Raymarching-ShaderMaterial
+   ========================================================= */
+const PLUME_VS = [
+  'varying vec3 vPos;',
+  'void main(){ vPos = position; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+].join('\n');
+const PLUME_FS = [
+  'uniform float uTime; uniform float uInt; uniform float uRe; uniform float uLen; uniform float uSpread; uniform float uBulge;',
+  'uniform float uPinch; uniform float uDiaAmp; uniform float uDiaSp; uniform float uSoot; uniform float uIon; uniform float uDens;',
+  'uniform float uFlick; uniform float uCoreLen; uniform float uChill; uniform float uSpeed;',
+  'uniform vec3 uScale; uniform vec3 uCam; uniform vec3 uCore; uniform vec3 uMid; uniform vec3 uEdge;',
+  'varying vec3 vPos;',
+  'float hash(vec3 p){ p = fract(p*0.3183099 + vec3(0.1,0.2,0.3)); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }',
+  'float noise(vec3 x){',
+  '  vec3 i = floor(x); vec3 f = fract(x); f = f*f*(3.0-2.0*f);',
+  '  float a = mix(hash(i), hash(i+vec3(1.0,0.0,0.0)), f.x);',
+  '  float b = mix(hash(i+vec3(0.0,1.0,0.0)), hash(i+vec3(1.0,1.0,0.0)), f.x);',
+  '  float c = mix(hash(i+vec3(0.0,0.0,1.0)), hash(i+vec3(1.0,0.0,1.0)), f.x);',
+  '  float d = mix(hash(i+vec3(0.0,1.0,1.0)), hash(i+vec3(1.0,1.0,1.0)), f.x);',
+  '  return mix(mix(a,b,f.y), mix(c,d,f.y), f.z);',
+  '}',
+  'float fbm(vec3 p){ float s = 0.0; float a = 0.55; for(int k=0;k<3;k++){ s += a*noise(p); p = p*2.07 + vec3(1.7,9.2,3.1); a *= 0.5; } return s; }',
+  'float radiusAt(float x){',
+  '  float sp = max(uDiaSp, 0.25);',
+  '  float pinch = 1.0 - uPinch*0.3*smoothstep(0.0, sp*0.9, x);',
+  '  float wob = 1.0 + 0.12*uDiaAmp*cos(6.2831853*(x/sp - 0.75));',
+  '  return uRe*pinch*wob + uSpread*x + uBulge*sqrt(max(x,0.0)*uRe);',
+  '}',
+  'void main(){',
+  '  vec3 ro = uCam; vec3 rd = normalize(vPos - uCam);',
+  '  vec3 inv = 1.0/(rd + vec3(1e-6));',
+  '  vec3 t0 = (vec3(0.0,-1.0,-1.0) - ro)*inv; vec3 t1 = (vec3(1.0,1.0,1.0) - ro)*inv;',
+  '  vec3 tmin = min(t0,t1); vec3 tmax = max(t0,t1);',
+  '  float tn = max(max(tmin.x, tmin.y), max(tmin.z, 0.0));',
+  '  float tf = min(min(tmax.x, tmax.y), tmax.z);',
+  '  if (tf <= tn) discard;',
+  '  const int STEPS = 46;',
+  '  float dt = (tf - tn)/float(STEPS);',
+  '  float jit = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898,78.233)))*43758.5453);',
+  '  float t = tn + dt*jit;',
+  '  float stepW = length(rd*uScale)*dt;',
+  '  vec3 acc = vec3(0.0); vec3 cold = vec3(0.0);',
+  '  float sp = max(uDiaSp, 0.25);',
+  '  for (int i=0; i<STEPS; i++){',
+  '    vec3 q = (ro + rd*t)*uScale; t += dt;',
+  '    float x = q.x;',
+  '    if (x < 0.0) continue;',
+  '    float r = length(q.yz);',
+  '    float R = radiusAt(x);',
+  '    if (r > R*1.2) continue;',
+  '    float xn = x/uLen;',
+  '    float along = exp(-xn*1.9)*(1.0 - smoothstep(0.62, 1.0, xn));',
+  '    vec3 nq = vec3(x*0.9 - uTime*uSpeed, q.y*1.7, q.z*1.7);',
+  '    float n = fbm(nq*(1.0 + uIon*0.6) + vec3(0.0, uTime*0.4*uFlick, 0.0));',
+  '    float edge = 1.0 - smoothstep(R*(0.3 + 0.45*n), R*1.12, r);',
+  '    float streak = 0.55 + 0.45*sin(x*9.0 - uTime*34.0 + n*5.0);',
+  '    float dens = edge*along*(0.45 + 1.0*n)*mix(1.0, streak, uIon);',
+  '    float core = exp(-(r*r)/(R*R*0.08 + 1e-4))*exp(-x/max(uCoreLen,0.1));',
+  '    float heat = clamp(core*1.3 + dens*0.3, 0.0, 1.0);',
+  '    vec3 col = mix(uEdge, uMid, smoothstep(0.04, 0.42, heat));',
+  '    col = mix(col, uCore, smoothstep(0.45, 0.95, heat));',
+  '    col *= mix(1.0, 0.35 + 0.65*heat, uSoot);',
+  '    float ph = x/sp - 0.75;',
+  '    float f = fract(ph + 0.5) - 0.5;',
+  '    float onset = step(0.0, ph + 0.5)*exp(-x/(sp*3.2));',
+  '    float rh = R*0.55*(1.0 - 2.0*abs(f));',
+  '    float rhomb = 1.0 - smoothstep(0.0, 0.08 + R*0.08, r - rh);',
+  '    float dd = f*sp/(0.05 + 0.06*R);',
+  '    float disk = exp(-dd*dd)*(1.0 - smoothstep(R*0.12, R*0.6, r));',
+  '    float dia = uDiaAmp*onset*(rhomb*0.4 + disk*1.6);',
+  '    acc += (col*dens*uDens*1.5 + uCore*dia*2.0 + uCore*core*1.1)*stepW;',
+  '    cold += vec3(0.55,0.78,1.0)*edge*exp(-x*1.1)*n*stepW;',
+  '  }',
+  '  gl_FragColor = vec4(acc*uInt + cold*uChill*0.22, 1.0);',
+  '}',
+].join('\n');
+
+function makePlumeMat() {
+  return new THREE.ShaderMaterial({
+    vertexShader: PLUME_VS, fragmentShader: PLUME_FS,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide,
+    uniforms: {
+      uTime: { value: 0 }, uInt: { value: 0 }, uRe: { value: 1 }, uLen: { value: 8 }, uSpread: { value: 0.05 }, uBulge: { value: 0 },
+      uPinch: { value: 0 }, uDiaAmp: { value: 0 }, uDiaSp: { value: 2 }, uSoot: { value: 0.3 }, uIon: { value: 0 }, uDens: { value: 1 },
+      uFlick: { value: 0 }, uCoreLen: { value: 2 }, uChill: { value: 0 }, uSpeed: { value: 7 },
+      uScale: { value: new THREE.Vector3(1, 1, 1) }, uCam: { value: new THREE.Vector3() },
+      uCore: { value: new THREE.Color(1, 1, 1) }, uMid: { value: new THREE.Color(1, 0.6, 0.2) }, uEdge: { value: new THREE.Color(1, 0.3, 0.1) },
+    },
+  });
+}
+const boxGeo = new THREE.BoxGeometry(1, 2, 2); boxGeo.translate(0.5, 0, 0);
+const plumeMat = makePlumeMat();
+const plume = new THREE.Mesh(boxGeo, plumeMat); plume.frustumCulled = false; plume.renderOrder = 2; scene.add(plume);
+const ggMat = makePlumeMat();
+const ggPlume = new THREE.Mesh(boxGeo, ggMat); ggPlume.frustumCulled = false; ggPlume.renderOrder = 2; scene.add(ggPlume);
+ggMat.uniforms.uCore.value.setRGB(0.9, 0.5, 0.22); ggMat.uniforms.uMid.value.setRGB(0.55, 0.26, 0.12); ggMat.uniforms.uEdge.value.setRGB(0.22, 0.12, 0.08);
+ggMat.uniforms.uSoot.value = 1; ggMat.uniforms.uRe.value = 0.07; ggMat.uniforms.uSpread.value = 0.14; ggMat.uniforms.uLen.value = 2.6; ggMat.uniforms.uDens.value = 0.7; ggMat.uniforms.uCoreLen.value = 0.3;
+const GG_EXIT = new THREE.Vector3(0.25, 1.15, 1.0);
+
+// geglättete Strahlparameter
+const PL = { int: 0, re: 1, len: 8, spread: 0.05, bulge: 0, pinch: 0, dia: 0, sp: 2, soot: 0.3, dens: 1, ion: 0, flick: 0, core: [1, 1, 1], mid: [1, 0.6, 0.2], edge: [1, 0.3, 0.1] };
+
+/* =========================================================
+   Prüfstand + Anbauteile je Triebwerk
+   ========================================================= */
+const parts = [];
+let partOrder = 0;
+function addPart(eng, obj, lv = 1, parent = scene) {
+  parent.add(obj);
+  const p = { obj, eng, lv, k: 0, target: -1, base: obj.scale.clone(), order: partOrder++ };
+  obj.scale.setScalar(0.0001); obj.visible = false;
+  parts.push(p);
+  return obj;
+}
+function cyl(r, len, mat, axis = 'x', seg = 32) {
+  const g = new THREE.CylinderGeometry(r, r, len, seg);
+  if (axis === 'x') g.rotateZ(Math.PI / 2); else if (axis === 'z') g.rotateX(Math.PI / 2);
+  return new THREE.Mesh(g, mat);
+}
+function box(w, h, d, mat) { return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); }
+function tubeMesh(pts, r, mat) {
+  const curve = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2])), false, 'centripetal');
+  const g = new THREE.TubeGeometry(curve, 96, r, 12, false);
+  g.computeBoundingBox(); const c = new THREE.Vector3(); g.boundingBox.getCenter(c); g.translate(-c.x, -c.y, -c.z);
+  const m = new THREE.Mesh(g, mat); m.position.copy(c);
+  return { mesh: m, curve };
+}
+function capsule(r, len, mat) { return new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 8, 32), mat); }
+
+// Prüfstand (gemeinsam): Schienen + Schubgerüst (folgt dem Einspritzkopf)
+const stand = new THREE.Group(); scene.add(stand);
+{
+  for (const z of [-1.25, 1.25]) {
+    const rail = box(18, 0.22, 0.32, M.steel); rail.position.set(-3, FLOOR_Y + 0.11, z); scene.add(rail);
+    const lipR = box(18, 0.03, 0.34, M.yellow); lipR.position.set(-3, FLOOR_Y + 0.235, z); scene.add(lipR);
+  }
+  const postGeo = new THREE.BoxGeometry(0.22, 4.3, 0.22);
+  for (const z of [-1.3, 1.3]) { const p = new THREE.Mesh(postGeo, M.steel2); p.position.set(0, FLOOR_Y + 2.15, z); stand.add(p); }
+  const top = box(0.24, 0.24, 2.84, M.steel2); top.position.set(0, FLOOR_Y + 4.3, 0); stand.add(top);
+  const arm = box(0.16, 0.16, 2.6, M.steel); arm.position.set(0, 0, 0); stand.add(arm);
+  const brace = box(0.12, 0.12, 2.6, M.steel); brace.position.set(0, FLOOR_Y + 1.1, 0); stand.add(brace);
+  for (const z of [-1.0, 1.0]) {
+    const cell = cyl(0.09, 0.32, M.yellow, 'x'); cell.position.set(-0.05, 0, z); stand.add(cell);
+    const led = box(0.02, 0.05, 0.05, M.ledLime); led.position.set(-0.05, 0.1, z); stand.add(led);
+  }
+  const plate = cyl(0.42, 0.08, M.steel2, 'x'); plate.position.set(0.12, 0, 0); stand.add(plate);
+  var standPlate = plate;
+}
+const loadCellAnchor = new THREE.Vector3();
+
+/* --- Feststoff --- */
+const grainMat = new THREE.MeshStandardMaterial({ color: 0x3a2a22, emissive: new THREE.Color(0xff5a14), emissiveIntensity: 0, metalness: 0.1, roughness: 0.8, side: THREE.DoubleSide, clippingPlanes: CUT });
+let grain;
+{
+  const s = new THREE.Shape();
+  const n = 8, ro = 0.46, ri = 0.24;
+  for (let i = 0; i <= n * 2; i++) { const a = (i / (n * 2)) * Math.PI * 2; const r = i % 2 ? ri : ro; const x = Math.cos(a) * r, y = Math.sin(a) * r; if (i === 0) s.moveTo(x, y); else s.lineTo(x, y); }
+  const g = new THREE.ExtrudeGeometry(s, { depth: 5.0, bevelEnabled: false, steps: 1 });
+  g.rotateY(Math.PI / 2);
+  grain = new THREE.Mesh(g, grainMat);
+  grain.position.set(-5.75, 0, 0);
+  addPart('solid', grain, 3);
+  for (const x of [-5.0, -3.6, -2.2, -0.9]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.915, 0.035, 10, 80), M.ringMetal); r.rotation.y = Math.PI / 2; r.position.set(x, 0, 0); addPart('solid', r, 2); }
+  const ign = cyl(0.13, 0.32, M.dark, 'x'); ign.position.set(-6.55, 0, 0); addPart('solid', ign, 2);
+  const ignTip = cyl(0.05, 0.12, M.hotPart, 'x'); ignTip.position.set(-6.75, 0, 0); addPart('solid', ignTip, 2);
+  const saddleG = new THREE.Group();
+  const sb = box(0.5, 1.2, 1.9, M.steel); sb.position.set(0, -1.6, 0); saddleG.add(sb);
+  const sr = new THREE.Mesh(new THREE.TorusGeometry(0.94, 0.07, 10, 48, Math.PI), M.steel2); sr.rotation.set(0, Math.PI / 2, Math.PI); saddleG.add(sr);
+  saddleG.position.set(-2.9, 0, 0);
+  addPart('solid', saddleG, 1);
+}
+
+/* --- Flüssig: Tanks, Leitungen, Pumpen --- */
+const FLOW = { merlin: [], raptor: [], solid: [], ion: [] };
+function pathFromCurve(curve, kind, colorFn, n = 90) {
+  const pts = curve.getSpacedPoints(n);
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + pts[i].distanceTo(pts[i - 1]));
+  const cols = pts.map((p, i) => colorFn(i / (pts.length - 1), p));
+  return { pts, cum, len: cum[cum.length - 1], cols, kind };
+}
+const C = {
+  fuel: new THREE.Color(1.0, 0.45, 0.14), lox: new THREE.Color(0.22, 0.78, 1.0), hot: new THREE.Color(1.0, 0.93, 0.78),
+  hot2: new THREE.Color(1.0, 0.52, 0.18), hotF: new THREE.Color(1.0, 0.55, 0.25), hotO: new THREE.Color(0.75, 0.93, 1.0),
+  xe: new THREE.Color(0.48, 0.46, 0.62), ion: new THREE.Color(0.68, 0.5, 1.0), elec: new THREE.Color(0.4, 0.92, 1.0), grain: new THREE.Color(1.0, 0.6, 0.25),
+};
+const tmpC = new THREE.Color();
+
+function buildLiquid(eng) {
+  const isR = eng === 'raptor';
+  const lox = capsule(0.62, 2.2, M.loxTank); lox.position.set(-6.6, 0.3, -1.3); addPart(eng, lox, 1);
+  const fuel = capsule(0.5, 1.8, M.fuelTank); fuel.position.set(-5.5, 0.0, 1.25); addPart(eng, fuel, 1);
+  for (const t of [[lox, -1.3, -6.6], [fuel, 1.25, -5.5]]) {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(t === undefined ? 0.6 : (t[0] === lox ? 0.63 : 0.51), 0.03, 8, 48), M.steel2);
+    band.rotation.x = Math.PI / 2; band.position.set(t[2], t[0] === lox ? 0.3 : 0, t[1]); addPart(eng, band, 2);
+  }
+  let loxPts, fuelPts;
+  if (!isR) {
+    const pump = new THREE.Group();
+    const body = cyl(0.3, 0.75, M.pump, 'x'); pump.add(body);
+    const vol = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.1, 12, 40), M.pump); vol.rotation.y = Math.PI / 2; vol.position.x = 0.2; pump.add(vol);
+    const turb = new THREE.Group(); turb.position.x = -0.42;
+    const disc = cyl(0.26, 0.06, M.hotPart, 'x'); turb.add(disc);
+    for (let i = 0; i < 10; i++) { const b = box(0.07, 0.48, 0.03, M.steel2); b.rotation.x = (i / 10) * Math.PI; turb.add(b); }
+    pump.add(turb); pump.userData.spin = turb;
+    pump.position.set(-4.0, 1.0, 0); addPart(eng, pump, 2);
+    const gg = cyl(0.13, 0.45, M.hotPart, 'x'); gg.position.set(-3.55, 1.62, 0.32); addPart(eng, gg, 2);
+    const ggx = tubeMesh([[-3.3, 1.62, 0.32], [-2.2, 1.55, 0.6], [-0.8, 1.3, 0.9], [GG_EXIT.x, GG_EXIT.y, GG_EXIT.z]], 0.065, M.steel2); addPart(eng, ggx.mesh, 2);
+    loxPts = [[-6.6, 2.05, -1.3], [-6.35, 2.35, -1.0], [-5.2, 1.8, -0.5], [-4.5, 1.15, -0.16], [-4.0, 1.0, -0.06], [-3.55, 0.95, -0.12], [-3.05, 0.75, -0.2], [-2.6, 0.42, -0.14]];
+    fuelPts = [[-5.5, 1.42, 1.25], [-5.3, 1.75, 1.0], [-4.6, 1.3, 0.45], [-4.0, 1.0, 0.06], [-3.5, 0.88, 0.25], [-3.0, 0.62, 0.3], [-2.6, 0.42, 0.16]];
+    const lt = tubeMesh(loxPts, 0.07, M.lineLox); addPart(eng, lt.mesh, 1);
+    const ft = tubeMesh(fuelPts, 0.065, M.lineFuel); addPart(eng, ft.mesh, 1);
+    FLOW[eng].push(pathFromCurve(lt.curve, 1, () => C.lox));
+    FLOW[eng].push(pathFromCurve(ft.curve, 0, () => C.fuel));
+  } else {
+    const mkPump = (y, z, preMat, label) => {
+      const pump = new THREE.Group();
+      pump.add(cyl(0.26, 0.6, M.pump, 'x'));
+      const vol = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.09, 12, 40), M.pump); vol.rotation.y = Math.PI / 2; vol.position.x = -0.15; pump.add(vol);
+      const turb = new THREE.Group(); turb.position.x = 0.36;
+      turb.add(cyl(0.22, 0.05, M.hotPart, 'x'));
+      for (let i = 0; i < 10; i++) { const b = box(0.06, 0.4, 0.025, M.steel2); b.rotation.x = (i / 10) * Math.PI; turb.add(b); }
+      pump.add(turb); pump.userData.spin = turb;
+      pump.position.set(-4.1, y, z); addPart(eng, pump, 2);
+      const pre = cyl(0.17, 0.42, preMat, 'x'); pre.position.set(-3.42, y, z); addPart(eng, pre, 2);
+      const preDome = new THREE.Mesh(new THREE.SphereGeometry(0.17, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), preMat); preDome.rotation.z = Math.PI / 2; preDome.position.set(-3.63, y, z); addPart(eng, preDome, 2);
+      return pump;
+    };
+    const preF = new THREE.MeshStandardMaterial({ color: 0x8a4a2a, metalness: 0.8, roughness: 0.35, emissive: new THREE.Color(0) });
+    const preO = new THREE.MeshStandardMaterial({ color: 0x4a6a80, metalness: 0.8, roughness: 0.35, emissive: new THREE.Color(0) });
+    M.preF = preF; M.preO = preO;
+    mkPump(1.0, 0.35, preF);
+    mkPump(-0.95, -0.35, preO);
+    fuelPts = [[-5.5, 1.42, 1.25], [-5.0, 1.65, 0.9], [-4.5, 1.08, 0.42], [-4.1, 1.0, 0.35], [-3.42, 1.0, 0.35], [-3.0, 0.72, 0.3], [-2.6, 0.38, 0.15]];
+    loxPts = [[-6.6, -1.45, -1.3], [-6.1, -1.65, -1.0], [-4.6, -1.05, -0.42], [-4.1, -0.95, -0.35], [-3.42, -0.95, -0.35], [-3.0, -0.66, -0.3], [-2.6, -0.36, -0.15]];
+    const ftA = tubeMesh(fuelPts.slice(0, 4), 0.065, M.lineFuel); addPart(eng, ftA.mesh, 1);
+    const ftB = tubeMesh(fuelPts.slice(3), 0.075, M.lineHotF); addPart(eng, ftB.mesh, 1);
+    const ltA = tubeMesh(loxPts.slice(0, 4), 0.07, M.lineLox); addPart(eng, ltA.mesh, 1);
+    const ltB = tubeMesh(loxPts.slice(3), 0.075, M.lineHotO); addPart(eng, ltB.mesh, 1);
+    const full = (pts) => new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(p[0], p[1], p[2])), false, 'centripetal');
+    FLOW[eng].push(pathFromCurve(full(fuelPts), 0, (u, p) => (p.x > -3.62 ? tmpC.copy(C.fuel).lerp(C.hotF, smooth(-3.62, -3.25, p.x)).clone() : C.fuel)));
+    FLOW[eng].push(pathFromCurve(full(loxPts), 1, (u, p) => (p.x > -3.62 ? tmpC.copy(C.lox).lerp(C.hotO, smooth(-3.62, -3.25, p.x)).clone() : C.lox)));
+  }
+  // Ventile (Experte)
+  for (const q of [[-5.0, 1.62, 0.78], [-5.6, 1.98, -0.78]]) {
+    const v = new THREE.Group();
+    v.add(box(0.16, 0.16, 0.16, M.dark));
+    const h = cyl(0.03, 0.18, M.yellow, 'y'); h.position.y = 0.16; v.add(h);
+    v.position.set(q[0], isR && q[1] > 1.9 ? -1.55 : q[1], isR && q[1] > 1.9 ? -0.9 : q[2]);
+    addPart(eng, v, 3);
+  }
+}
+buildLiquid('merlin');
+buildLiquid('raptor');
+
+/* --- Ionentriebwerk --- */
+function hexAlpha() {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const x = c.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0, 0, 256, 256);
+  x.fillStyle = '#fff'; x.beginPath(); x.arc(128, 128, 126, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#000';
+  const s = 15;
+  for (let row = -10; row <= 10; row++) for (let col = -10; col <= 10; col++) {
+    const px = 128 + col * s + (row % 2 ? s / 2 : 0), py = 128 + row * s * 0.866;
+    if ((px - 128) ** 2 + (py - 128) ** 2 < 112 * 112) { x.beginPath(); x.arc(px, py, 5.2, 0, Math.PI * 2); x.fill(); }
+  }
+  return new THREE.CanvasTexture(c);
+}
+const gridMat = new THREE.MeshStandardMaterial({ color: 0x9ea4ad, metalness: 0.85, roughness: 0.3, alphaMap: hexAlpha(), alphaTest: 0.5, side: THREE.DoubleSide, clippingPlanes: CUT, emissive: new THREE.Color(0) });
+const ionParts = {};
+{
+  const ex = ENG.ion.vis.injX + ENG.ion.vis.domeH + ENG.ion.vis.cL + 0.06 + 0.12;
+  ionParts.exitX = ex;
+  const xe = new THREE.Mesh(new THREE.SphereGeometry(0.72, 40, 24), M.xeTank); xe.position.set(-4.3, 0.1, 0); addPart('ion', xe, 1);
+  const xl = tubeMesh([[-3.56, 0.12, 0], [-2.8, 0.35, 0.05], [-2.1, 0.22, 0.05], [-1.62, 0.1, 0.04]], 0.05, M.lineXe); addPart('ion', xl.mesh, 1);
+  FLOW.ion.push(pathFromCurve(xl.curve, 3, () => C.xe));
+  for (const dx of [-0.02, 0.07]) {
+    const g = new THREE.Mesh(new THREE.CircleGeometry(0.93, 64), gridMat); g.rotation.y = Math.PI / 2; g.position.set(ex + dx, 0, 0); addPart('ion', g, 1);
+  }
+  const gr = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.05, 10, 80), M.ringMetal); gr.rotation.y = Math.PI / 2; gr.position.set(ex + 0.03, 0, 0); addPart('ion', gr, 1);
+  for (const x of [-1.25, -0.8, -0.35]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.98, 0.06, 10, 80), M.magnet); r.rotation.y = Math.PI / 2; r.position.set(x, 0, 0); addPart('ion', r, 2); }
+  const neut = new THREE.Group();
+  const nb = cyl(0.07, 0.38, M.steel2, 'x'); neut.add(nb);
+  const nt = cyl(0.035, 0.08, M.hotPart, 'x'); nt.position.x = 0.22; neut.add(nt);
+  neut.position.set(ex + 0.05, 1.18, 0); neut.rotation.z = -0.35; addPart('ion', neut, 1);
+  const nArm = box(0.06, 0.3, 0.06, M.steel); nArm.position.set(ex - 0.1, 1.0, 0); addPart('ion', nArm, 1);
+  ionParts.neutTip = new THREE.Vector3(ex + 0.26, 1.1, 0);
+  const el = new THREE.CatmullRomCurve3([ionParts.neutTip.clone(), new THREE.Vector3(ex + 0.8, 0.9, 0.05), new THREE.Vector3(ex + 1.6, 0.45, 0), new THREE.Vector3(ex + 2.3, 0.15, 0)]);
+  FLOW.ion.push(pathFromCurve(el, 4, () => C.elec, 40));
+  const ppu = new THREE.Group();
+  ppu.add(box(0.9, 0.5, 0.65, M.dark));
+  const l1 = box(0.02, 0.05, 0.3, M.ledLime); l1.position.set(0.46, 0.1, 0); ppu.add(l1);
+  ppu.position.set(-3.2, -1.6, 0.6); addPart('ion', ppu, 3);
+  const cab = tubeMesh([[-2.75, -1.5, 0.6], [-2.1, -1.2, 0.5], [-1.4, -0.9, 0.3], [-1.0, -0.75, 0.2]], 0.03, M.dark); addPart('ion', cab.mesh, 3);
+  // Vakuumkammer-Ringe
+  for (let i = 0; i < 9; i++) {
+    const r = new THREE.Mesh(new THREE.TorusGeometry(3.3, 0.07, 8, 96), M.vac); r.rotation.y = Math.PI / 2; r.position.set(-6 + i * 2.4, 0.6, 0); addPart('ion', r, 1);
+  }
+  ionParts.grid = ex;
+}
+// Feststoff hat keine Zuleitungen
+
+/* =========================================================
+   Partikel: Treibstofffluss
+   ========================================================= */
+const NP = 1100;
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(NP * 3), pCol = new Float32Array(NP * 3), pSize = new Float32Array(NP), pAlpha = new Float32Array(NP);
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+pGeo.setAttribute('aColor', new THREE.BufferAttribute(pCol, 3));
+pGeo.setAttribute('aSize', new THREE.BufferAttribute(pSize, 1));
+pGeo.setAttribute('aAlpha', new THREE.BufferAttribute(pAlpha, 1));
+const PT_VS = [
+  'attribute vec3 aColor; attribute float aSize; attribute float aAlpha; uniform float uPx;',
+  'varying vec3 vC; varying float vA;',
+  'void main(){ vC = aColor; vA = aAlpha; vec4 mv = modelViewMatrix*vec4(position,1.0); gl_PointSize = max(1.0, aSize*uPx / -mv.z); gl_Position = projectionMatrix*mv; }',
+].join('\n');
+const pMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  uniforms: { uPx: { value: 600 } },
+  vertexShader: PT_VS,
+  fragmentShader: 'varying vec3 vC; varying float vA; void main(){ vec2 c = gl_PointCoord - 0.5; float d = length(c); if (d > 0.5) discard; float a = pow(1.0 - d*2.0, 1.5); gl_FragColor = vec4(vC*a*vA, 1.0); }',
+});
+const pts = new THREE.Points(pGeo, pMat); pts.frustumCulled = false; pts.renderOrder = 3; scene.add(pts);
+const P = Array.from({ length: NP }, () => ({ act: false, kind: 0, phase: 0, t: 0, s: 0, rho: 0, ang: 0, age: 0, path: null, j: Math.random(), v: 1 }));
+let emitAcc = 0, emitIdx = 0;
+
+// Kaltdampf (Vorkühlen)
+const NV = 260;
+const vGeo = new THREE.BufferGeometry();
+const vPos = new Float32Array(NV * 3), vCol = new Float32Array(NV * 3), vSize = new Float32Array(NV), vAlpha = new Float32Array(NV);
+vGeo.setAttribute('position', new THREE.BufferAttribute(vPos, 3));
+vGeo.setAttribute('aColor', new THREE.BufferAttribute(vCol, 3));
+vGeo.setAttribute('aSize', new THREE.BufferAttribute(vSize, 1));
+vGeo.setAttribute('aAlpha', new THREE.BufferAttribute(vAlpha, 1));
+const vMat = new THREE.ShaderMaterial({
+  transparent: true, depthWrite: false, blending: THREE.NormalBlending,
+  uniforms: { uPx: { value: 600 } },
+  vertexShader: PT_VS,
+  fragmentShader: 'varying vec3 vC; varying float vA; void main(){ vec2 c = gl_PointCoord - 0.5; float d = length(c); if (d > 0.5) discard; float a = 1.0 - smoothstep(0.0, 0.5, d); gl_FragColor = vec4(vC, a*a*vA); }',
+});
+const vapor = new THREE.Points(vGeo, vMat); vapor.frustumCulled = false; vapor.renderOrder = 1; scene.add(vapor);
+const V = Array.from({ length: NV }, () => ({ act: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 0, max: 1 }));
+for (let i = 0; i < NV; i++) { vPos[i * 3 + 1] = -999; vCol[i * 3] = 0.82; vCol[i * 3 + 1] = 0.9; vCol[i * 3 + 2] = 1.0; }
+for (let i = 0; i < NP; i++) pPos[i * 3 + 1] = -999;
+
+function samplePath(path, t, out, col) {
+  const cum = path.cum;
+  let lo = 0, hi = cum.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (cum[m] < t) lo = m; else hi = m; }
+  const f = cum[hi] > cum[lo] ? (t - cum[lo]) / (cum[hi] - cum[lo]) : 0;
+  out.lerpVectors(path.pts[lo], path.pts[hi], clamp(f, 0, 1));
+  col.copy(path.cols[lo]).lerp(path.cols[hi], clamp(f, 0, 1));
+}
+const tv = new THREE.Vector3(), tc = new THREE.Color();
+
+function spawnParticle(p, chillOnly) {
+  const E = ENG[ui.engine];
+  p.act = true; p.age = 0; p.j = Math.random();
+  if (E.id === 'solid') {
+    p.kind = 2; p.phase = 1;
+    const x0 = vis.injX + vis.domeH + 0.15, x1 = vis.injX + vis.domeH + vis.cL - 0.1;
+    p.s = lerp(x0, x1, Math.random());
+    p.rho = (0.36 * grainScale) / vis.cR * (0.9 + Math.random() * 0.2);
+    p.ang = Math.random() * Math.PI * 2;
+    return;
+  }
+  const paths = FLOW[E.id];
+  let path;
+  if (chillOnly) path = paths.find((q) => q.kind === 1) || paths[0];
+  else if (E.ion) path = Math.random() < 0.82 ? paths[0] : paths[1];
+  else path = paths[Math.random() < 0.5 ? 0 : 1];
+  p.path = path; p.kind = path.kind; p.phase = 0; p.t = 0; p.chill = !!chillOnly;
+  p.v = 0.85 + Math.random() * 0.3;
+}
+
+let grainScale = 0.55;
+
+function updateParticles(dt, flow, flowSpeed) {
+  const E = ENG[ui.engine];
+  const chillOnly = sim.state === 'chill';
+  const rate = E.id === 'solid' ? 420 : E.ion ? 170 : 300;
+  emitAcc += (chillOnly ? 70 : rate * flow) * dt;
+  let guard = 0;
+  while (emitAcc >= 1 && guard < NP) {
+    const p = P[emitIdx]; emitIdx = (emitIdx + 1) % NP; guard++;
+    if (!p.act) { spawnParticle(p, chillOnly); emitAcc -= 1; }
+  }
+  if (emitAcc > 50) emitAcc = 0;
+  const exitX = geom.exitX, throatX = geom.throatX, injX = vis.injX;
+  const tR = vis.tR;
+  const plumeExt = E.ion ? 8 : 3.4 + 2 * flow;
+  const xEnd = exitX + plumeExt;
+  const vt = 3.6 * flowSpeed;
+  const spread = PL.spread;
+  for (let i = 0; i < NP; i++) {
+    const p = P[i];
+    const i3 = i * 3;
+    if (!p.act) { pAlpha[i] = 0; pPos[i3 + 1] = -999; continue; }
+    p.age += dt;
+    let size = 0.07, alpha = 1;
+    if (p.phase === 0) {
+      p.t += 2.3 * p.v * (chillOnly ? 0.6 : (0.45 + 0.55 * flowSpeed)) * dt;
+      if (p.t >= p.path.len) {
+        if (p.chill) { p.act = false; pAlpha[i] = 0; continue; }
+        if (p.kind === 4) { p.phase = 2; p.s = p.path.pts[p.path.pts.length - 1].x; p.rho = 0.12 + Math.random() * 0.25; p.ang = Math.random() * 6.283; }
+        else { p.phase = 1; p.s = injX + 0.05; p.rho = Math.random() * 0.8; p.ang = Math.random() * 6.283; p.age = 0; }
+      } else {
+        samplePath(p.path, p.t, tv, tc);
+        pPos[i3] = tv.x; pPos[i3 + 1] = tv.y; pPos[i3 + 2] = tv.z;
+        const b = p.kind === 4 ? 2.2 : 1.6;
+        pCol[i3] = tc.r * b; pCol[i3 + 1] = tc.g * b; pCol[i3 + 2] = tc.b * b;
+        pSize[i] = p.kind === 4 ? 0.045 : 0.065; pAlpha[i] = 1;
+        continue;
+      }
+    }
+    if (E.ion) {
+      let v;
+      if (p.phase === 1 && p.s < exitX - 0.04) {
+        v = 0.35 + 0.25 * Math.sin(p.age * 3 + p.j * 9);
+        p.ang += dt * (0.6 + p.j);
+        p.rho = clamp(p.rho + Math.sin(p.age * 4 + p.j * 20) * dt * 0.6, 0.05, 0.85);
+        const ionz = smooth(0.15, 0.9, p.age * sim.ionGlow);
+        tc.copy(C.xe).lerp(C.ion, ionz);
+        const b = 1 + ionz * 1.6;
+        tc.multiplyScalar(b);
+        size = 0.06 + ionz * 0.02;
+        if (Math.random() < 0.006 * sim.ionGlow) tc.setRGB(2.5, 2.5, 3.2);
+      } else {
+        p.phase = 2;
+        v = 16 * (0.6 + 0.4 * flowSpeed);
+        p.rho = Math.min(p.rho, 0.8);
+        tc.copy(p.kind === 4 ? C.elec : C.ion).multiplyScalar(2.6);
+        size = p.kind === 4 ? 0.04 : 0.05;
+        alpha = 1 - smooth(exitX + 1, xEnd, p.s);
+      }
+      p.s += v * dt;
+      if (p.s > xEnd) { p.act = false; pAlpha[i] = 0; continue; }
+      const R = p.s <= exitX ? radiusAtX(p.s) * 0.92 : vis.eR * (1 + 0.05 * (p.s - exitX));
+      const r = p.rho * R;
+      pPos[i3] = p.s; pPos[i3 + 1] = Math.cos(p.ang) * r; pPos[i3 + 2] = Math.sin(p.ang) * r;
+      pCol[i3] = tc.r; pCol[i3 + 1] = tc.g; pCol[i3 + 2] = tc.b; pSize[i] = size; pAlpha[i] = alpha;
+      continue;
+    }
+    // chemische Triebwerke
+    const R = p.s <= exitX ? radiusAtX(p.s) : vis.eR * (1 + 0.0) + spread * (p.s - exitX) + PL.bulge * Math.sqrt(Math.max(0, p.s - exitX) * vis.eR);
+    let v;
+    if (p.s < throatX) v = Math.max(E.id === 'solid' ? 1.1 : 0.55, vt * Math.pow(tR / Math.max(R, tR), 2) * 1.0);
+    else if (p.s <= exitX) v = vt * (1 + 1.3 * (1 - tR / Math.max(R, tR)));
+    else v = vt * 2.4;
+    p.s += v * p.v * dt;
+    if (p.s > xEnd) { p.act = false; pAlpha[i] = 0; continue; }
+    if (E.id === 'solid' && p.s < throatX) p.rho = damp(p.rho, 0.28, 0.6, dt);
+    if (p.s > throatX && p.s < exitX) p.rho = damp(p.rho, 0.55 + p.j * 0.3, 2, dt);
+    const r = p.rho * R * 0.95;
+    p.ang += dt * 0.4;
+    pPos[i3] = p.s; pPos[i3 + 1] = Math.cos(p.ang) * r; pPos[i3 + 2] = Math.sin(p.ang) * r;
+    const chamberLen = Math.max(0.3, throatX - injX);
+    const comb = E.id === 'solid' ? smooth(0, 0.4, p.age) : smooth(0, 0.45, (p.s - injX) / chamberLen);
+    const base = p.kind === 0 ? C.fuel : p.kind === 1 ? C.lox : C.grain;
+    tc.copy(base).lerp(C.hot, comb);
+    let b = 1.4 + comb * 1.4;
+    if (p.s > throatX) { const u = clamp((p.s - throatX) / Math.max(0.2, exitX - throatX), 0, 1); tc.lerp(C.hot2, u * 0.75); b = 2.8 - u * 0.8; size = 0.075 + u * 0.03; }
+    if (p.s > exitX) { const u = (p.s - exitX) / plumeExt; alpha = 1 - smooth(0.2, 1, u); size = 0.1 + u * 0.08; b = 1.6; }
+    pCol[i3] = tc.r * b; pCol[i3 + 1] = tc.g * b; pCol[i3 + 2] = tc.b * b; pSize[i] = size; pAlpha[i] = alpha;
+  }
+  pGeo.attributes.position.needsUpdate = true; pGeo.attributes.aColor.needsUpdate = true;
+  pGeo.attributes.aSize.needsUpdate = true; pGeo.attributes.aAlpha.needsUpdate = true;
+}
+
+function updateVapor(dt) {
+  const E = ENG[ui.engine];
+  const cryo = (E.id === 'merlin' || E.id === 'raptor');
+  const rate = cryo ? (sim.state === 'chill' ? 110 : sim.chill * 30 + (sim.state === 'run' ? 8 : 0)) : 0;
+  let n = rate * dt + Math.random();
+  for (let i = 0; i < NV && n >= 1; i++) {
+    const q = V[i];
+    if (q.act) continue;
+    n -= 1;
+    q.act = true; q.life = 0; q.max = 1.8 + Math.random() * 1.6;
+    const r = Math.random();
+    if (r < 0.55) {
+      const x = lerp(vis.injX, geom.exitX, Math.random());
+      const a = Math.random() * Math.PI * 2, R = radiusAtX(x) + 0.04;
+      q.x = x; q.y = Math.cos(a) * R; q.z = Math.sin(a) * R;
+      q.vx = (Math.random() - 0.5) * 0.15; q.vy = -0.15 - Math.random() * 0.25; q.vz = Math.sin(a) * 0.12;
+    } else if (r < 0.8) {
+      q.x = geom.exitX - 0.1; q.y = (Math.random() - 0.5) * vis.eR; q.z = (Math.random() - 0.5) * vis.eR;
+      q.vx = 0.4 + Math.random() * 0.5; q.vy = -0.2 - Math.random() * 0.2; q.vz = (Math.random() - 0.5) * 0.2;
+    } else {
+      q.x = -6.6 + (Math.random() - 0.5) * 0.3; q.y = 2.1; q.z = -1.3;
+      q.vx = (Math.random() - 0.5) * 0.2; q.vy = 0.15 + Math.random() * 0.15; q.vz = (Math.random() - 0.5) * 0.2;
+    }
+  }
+  for (let i = 0; i < NV; i++) {
+    const q = V[i], i3 = i * 3;
+    if (!q.act) { vAlpha[i] = 0; vPos[i3 + 1] = -999; continue; }
+    q.life += dt;
+    if (q.life > q.max) { q.act = false; vAlpha[i] = 0; continue; }
+    q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt; q.vy -= 0.05 * dt;
+    if (q.y < FLOOR_Y + 0.1) { q.y = FLOOR_Y + 0.1; q.vy = 0; q.vx *= 1.01; }
+    const u = q.life / q.max;
+    vPos[i3] = q.x; vPos[i3 + 1] = q.y; vPos[i3 + 2] = q.z;
+    vSize[i] = 0.35 + u * 1.1; vAlpha[i] = Math.sin(u * Math.PI) * 0.16;
+  }
+  vGeo.attributes.position.needsUpdate = true; vGeo.attributes.aSize.needsUpdate = true; vGeo.attributes.aAlpha.needsUpdate = true;
+}
+
+/* =========================================================
+   Teile-Sichtbarkeit (Stufe × Triebwerk)
+   ========================================================= */
+let switching = false;
+function syncParts() {
+  let inIdx = 0, outIdx = 0;
+  for (const p of parts) {
+    const want = p.eng === ui.engine && ui.level >= p.lv ? 1 : 0;
+    if (want === p.target) continue;
+    p.target = want;
+    if (want) {
+      p.obj.visible = true;
+      tween(p, { k: 1 }, { dur: 0.75, delay: (switching ? 0.6 : 0.05) + inIdx++ * 0.035, ease: Ease.outBack, onUpdate: () => applyPart(p) });
+    } else {
+      tween(p, { k: 0 }, { dur: 0.38, delay: outIdx++ * 0.015, ease: Ease.in3, onUpdate: () => applyPart(p), onComplete: () => { if (p.target === 0) p.obj.visible = false; } });
+    }
+  }
+}
+function applyPart(p) { const s = Math.max(0.0001, p.k); p.obj.scale.set(p.base.x * s, p.base.y * s, p.base.z * s); }
+
+/* =========================================================
+   Beschriftungen
+   ========================================================= */
+const labelsEl = $('#labels');
+let labels = [];
+const LV = (a, b, c) => (l) => (l === 1 ? a : l === 2 ? b : c);
+function vec(x, y, z) { return new THREE.Vector3(x, y, z); }
+function labelDefs() {
+  const E = ENG[ui.engine];
+  const chamber = () => vec(vis.injX + vis.domeH + vis.cL * 0.5, vis.cR, 0);
+  const throat = () => vec(geom.throatX, -vis.tR, 0);
+  const bell = () => vec(geom.exitX - vis.nL * 0.35, radiusAtX(geom.exitX - vis.nL * 0.35), 0);
+  const exitP = () => vec(geom.exitX, -vis.eR * 0.9, 0);
+  const L = [];
+  const add = (lv, anchor, text, opt = {}) => L.push(Object.assign({ lv, anchor, text }, opt));
+  if (E.id === 'merlin' || E.id === 'raptor') {
+    const isR = E.id === 'raptor';
+    add(1, () => vec(-6.6, 1.0, -1.3), LV('Sauerstoff (eiskalt)', 'LOX-Tank', 'LOX · kryogen gelagert'), { c: 'lox', minor: true });
+    add(1, () => vec(-5.5, 0.5, 1.25), LV(isR ? 'Methan-Tank' : 'Kerosin-Tank', isR ? 'Methan-Tank (CH₄)' : 'RP-1-Tank (Kerosin)', isR ? 'CH₄ · Tankdruck' : 'RP-1 · Tankdruck'), { c: 'fuel', dn: true, minor: true });
+    if (!isR) {
+      add(2, () => vec(-4.0, 1.3, 0), LV('', 'Turbopumpe', 'Turbopumpe · zehntausende U/min'));
+      add(2, () => vec(-3.55, 1.75, 0.32), LV('', 'Gasgenerator', 'Gasgenerator · brennstoffreich'), { c: 'hot', minor: true });
+      add(2, () => vec(GG_EXIT.x - 0.3, GG_EXIT.y + 0.06, GG_EXIT.z), LV('', 'Abgas – ungenutzt', 'GG-Abgas → Isp-Verlust'), { c: 'hot', minor: true });
+    } else {
+      add(2, () => vec(-3.42, 1.17, 0.35), LV('', 'Vorbrenner (brennstoffreich)', 'Vorbrenner CH₄-reich → Methanpumpe'), { c: 'fuel' });
+      add(2, () => vec(-3.42, -1.12, -0.35), LV('', 'Vorbrenner (sauerstoffreich)', 'Vorbrenner O₂-reich → LOX-Pumpe'), { c: 'lox', dn: true });
+    }
+    add(2, () => vec(vis.injX + 0.05, vis.cR * 0.6, 0), LV('', 'Einspritzkopf', isR ? 'Einspritzkopf · Gas/Gas' : 'Einspritzkopf · Zerstäubung'), { minor: true, dn: true });
+  }
+  if (E.id === 'solid') {
+    add(1, () => vec(-4.4, vis.cR, 0), LV('Fester Treibstoff im Rohr', 'Gehäuse mit Treibsatz (Grain)', 'Treibsatz APCP · Sternkanal'));
+    add(2, () => vec(-6.7, 0.1, 0), LV('', 'Zünder', 'Zünder'), { c: 'hot', minor: true });
+    add(3, () => vec(-2.2, 0.36 * grainScale, 0.0), LV('', '', 'Brennkanal · r = a·pᶜⁿ'), { c: 'hot', dn: true });
+  }
+  if (E.ion) {
+    add(1, () => vec(-4.3, 0.75, 0), LV('Xenon-Gas', 'Xenon-Tank', 'Xenon · Edelgas'), { c: 'ion', minor: true });
+    add(1, () => vec(-0.9, vis.cR + 0.05, 0), LV('Hier wird das Gas aufgeladen', 'Entladungskammer · Ionisierung', 'Ionisierung durch e⁻-Stöße'), { c: 'ion' });
+    add(1, () => vec(geom.exitX + 0.03, -0.75, 0), LV('Elektrische Schleuder', 'Gitter (Schirm + Beschleunigung)', 'Gitter · ca. 1 kV'), { dn: true, c: 'ion' });
+    add(1, () => ionParts.neutTip.clone(), LV('Elektronen-Spender', 'Neutralisator', 'Neutralisator · e⁻ in den Strahl'), { c: 'lox' });
+    add(2, () => vec(geom.exitX + 3.2, -0.4, 0), LV('', 'Ionenstrahl', () => 'Ionen · vₑ ≈ ' + nf(31, 0) + ' km/s'), { dn: true, minor: true, c: 'ion' });
+    add(3, () => vec(-3.2, -1.35, 0.6), LV('', '', 'PPU · ca. 2,3 kW'), { minor: true });
+    add(1, () => vec(5.5, 3.4, 0), LV('Luftleerer Raum', 'Vakuumkammer', 'Vakuumkammer · pₐ ≈ 0'), { minor: true });
+  } else {
+    add(1, chamber, LV('Hier brennt es', 'Brennkammer', () => 'Brennkammer · pᶜ ≈ ' + nf(live.p ? live.p.pc : ENG[ui.engine].pc, 0) + ' bar · ca. 3500 K'), { c: 'hot' });
+    add(2, throat, LV('', 'Düsenhals – engste Stelle', 'Düsenhals · Ma = 1 · A*'), { dn: true });
+    add(1, bell, LV('Trichter, der das Gas lenkt', E.id === 'solid' ? 'Düsenglocke' : 'Düsenglocke · Kühlkanäle', () => 'Düsenglocke · ε = ' + nf(ui.eps, 1)));
+    add(3, exitP, LV('', '', () => 'Austritt · pₑ = ' + nf(live.pPrev ? live.pPrev.pe : 0, 2) + ' bar · Mₑ = ' + nf(live.pPrev ? live.pPrev.Me : 0, 1)), { dn: true, minor: true });
+    add(1, () => vec(geom.exitX + PL.sp * 0.75, PL.re * 0.55 + 0.2, 0), LV('Leuchtende Rauten = Stoßdiamanten', 'Stoßdiamanten (Mach-Scheiben)', 'Stoßzellen · Abstand ∝ Dₑ·√(Mₑ²−1)'), { dia: true, c: 'hot' });
+  }
+  add(3, () => loadCellAnchor.clone(), LV('', '', () => 'Kraftmessdose · F = ' + fmtForceStr(live.F)), { dn: true });
+  return L.filter((d) => ui.level >= d.lv);
+}
+function buildLabels() {
+  labelsEl.innerHTML = '';
+  labels = labelDefs().map((d) => {
+    const el = document.createElement('div');
+    el.className = 'lbl' + (d.dn ? ' dn' : '') + (d.c ? ' c-' + d.c : '') + (d.minor ? ' minor' : '');
+    el.innerHTML = '<i></i><span></span>';
+    labelsEl.appendChild(el);
+    const span = el.querySelector('span');
+    return { d, el, span, last: '', shown: false };
+  });
+  labelTextTick = 0;
+}
+let labelTextTick = 0;
+const projV = new THREE.Vector3();
+function updateLabels(dt) {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  labelTextTick -= dt;
+  const refresh = labelTextTick <= 0;
+  if (refresh) labelTextTick = 0.2;
+  const ready = !switching;
+  for (const L of labels) {
+    if (refresh) {
+      const raw = L.d.text(ui.level);
+      const txt = typeof raw === 'function' ? raw() : raw;
+      if (txt !== L.last) { L.span.textContent = txt; L.last = txt; }
+    }
+    projV.copy(L.d.anchor()).project(camera);
+    let vis2 = ready && projV.z < 1 && L.last !== '';
+    if (L.d.dia) vis2 = vis2 && PL.dia > 0.3 && PL.int > 0.25;
+    const x = (projV.x * 0.5 + 0.5) * w, y = (-projV.y * 0.5 + 0.5) * h;
+    if (x < 10 || x > w - 40 || y < 70 || y > h - 50) vis2 = false;
+    L.el.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
+    if (vis2 !== L.shown) { L.el.classList.toggle('in', vis2); L.shown = vis2; }
+  }
+}
+
+/* =========================================================
+   Kamera (eigene Orbit-Steuerung + Wackeln)
+   ========================================================= */
+const cam = { tx: 0, ty: 0.2, tz: 0, theta: -0.42, phi: 0.16, dist: 14 };
+const usr = { theta: 0, phi: 0, tTheta: 0, tPhi: 0, px: 0, py: 0, dragging: false };
+let shakeT = 0;
+function camGoal() {
+  const E = ENG[ui.engine];
+  const aspect = Math.max(0.3, stage.clientWidth / Math.max(1, stage.clientHeight));
+  let xmin, xmax;
+  if (E.id === 'solid') { xmin = -7.2; xmax = geom.exitX + 6; }
+  else if (E.ion) { xmin = -5.2; xmax = geom.exitX + 6.5; }
+  else { xmin = -7.4; xmax = geom.exitX + 6; }
+  if (aspect < 1.15) { xmin = Math.max(xmin, vis.injX - (E.id === 'solid' ? 0.6 : E.ion ? 1.6 : 2.0)); xmax = geom.exitX + 4.2; }
+  let target = { x: (xmin + xmax) / 2, y: 0.25, z: 0 };
+  let span = xmax - xmin;
+  let theta = ui.level === 1 ? -0.5 : ui.level === 2 ? -0.38 : -0.12;
+  let phi = ui.level === 3 ? 0.1 : 0.17;
+  if (ui.focus >= 0) {
+    const f = focusPoint(ui.focus);
+    target = f; span = E.id === 'solid' && ui.focus === 0 ? 8 : 5;
+    theta = ui.level === 3 ? -0.18 : -0.3; phi = 0.12;
+  }
+  const vfov = THREE.MathUtils.degToRad(camera.fov);
+  const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
+  const dist = Math.max(6, (span * 0.5) / Math.tan(hfov / 2) * 1.02 + 2.2, ((span * 0.32) / Math.tan(vfov / 2)));
+  return { tx: target.x, ty: target.y, tz: target.z, theta, phi, dist };
+}
+function focusPoint(i) {
+  const E = ENG[ui.engine];
+  if (E.id === 'solid') return [vec(-3.6, 0, 0), vec(-2.0, 0, 0), vec(geom.throatX + 0.4, 0, 0), vec(geom.exitX + 2.2, 0, 0)][i];
+  if (E.ion) return [vec(-2.8, 0.1, 0), vec(-0.8, 0, 0), vec(geom.exitX, 0, 0), vec(geom.exitX + 2.2, 0.3, 0)][i];
+  return [vec(-4.6, 0.6, 0), vec(vis.injX + vis.domeH + vis.cL * 0.5, 0, 0), vec(geom.throatX + vis.nL * 0.4, 0, 0), vec(geom.exitX + 2.6, 0, 0)][i];
+}
+function updateCamera(dt, t) {
+  const g = camGoal();
+  const k = RM ? 30 : 2.4;
+  cam.tx = damp(cam.tx, g.tx, k, dt); cam.ty = damp(cam.ty, g.ty, k, dt); cam.tz = damp(cam.tz, g.tz, k, dt);
+  cam.theta = damp(cam.theta, g.theta, k * 0.8, dt); cam.phi = damp(cam.phi, g.phi, k * 0.8, dt); cam.dist = damp(cam.dist, g.dist, k * 0.9, dt);
+  usr.theta = damp(usr.theta, usr.tTheta + (RM || usr.dragging ? 0 : usr.px * 0.06), 4, dt);
+  usr.phi = damp(usr.phi, usr.tPhi + (RM || usr.dragging ? 0 : -usr.py * 0.03), 4, dt);
+  const drift = RM ? 0 : Math.sin(t * 0.07) * 0.025;
+  const th = cam.theta + usr.theta + drift, ph = clamp(cam.phi + usr.phi, -0.05, 0.9);
+  camera.position.set(cam.tx + Math.sin(th) * Math.cos(ph) * cam.dist, cam.ty + Math.sin(ph) * cam.dist, cam.tz + Math.cos(th) * Math.cos(ph) * cam.dist);
+  camera.lookAt(cam.tx, cam.ty, cam.tz);
+  scene.fog.density = clamp(0.5 / cam.dist, 0.012, 0.034);
+  if (!RM) {
+    const run = sim.state === 'run' || sim.state === 'ramp' ? PL.int : 0;
+    const a = shakeT + run * (ENG[ui.engine].ion ? 0 : 0.0045);
+    if (a > 0.0001) {
+      camera.position.x += (Math.sin(t * 71.3) + Math.sin(t * 43.1)) * a * 0.5;
+      camera.position.y += (Math.sin(t * 63.7) + Math.cos(t * 39.9)) * a * 0.5;
+      camera.rotation.z += Math.sin(t * 57.1) * a * 0.04;
+    }
+  }
+  shakeT = Math.max(0, shakeT * Math.exp(-dt * 2.6) - dt * 0.002);
+}
+
+// Ziehen zum Drehen
+canvas.addEventListener('pointerdown', (e) => {
+  usr.dragging = true; usr.lx = e.clientX; usr.ly = e.clientY; canvas.classList.add('dragging');
+  try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+});
+canvas.addEventListener('pointermove', (e) => {
+  const r = stage.getBoundingClientRect();
+  usr.px = ((e.clientX - r.left) / r.width) * 2 - 1; usr.py = ((e.clientY - r.top) / r.height) * 2 - 1;
+  if (!usr.dragging) return;
+  const dx = e.clientX - usr.lx, dy = e.clientY - usr.ly; usr.lx = e.clientX; usr.ly = e.clientY;
+  usr.tTheta = clamp(usr.tTheta - dx * 0.006, -1.3, 1.1);
+  usr.tPhi = clamp(usr.tPhi + dy * 0.004, -0.2, 0.6);
+  updateViewBtn();
+});
+const endDrag = () => { usr.dragging = false; canvas.classList.remove('dragging'); };
+canvas.addEventListener('pointerup', endDrag);
+canvas.addEventListener('pointercancel', endDrag);
+canvas.addEventListener('pointerleave', () => { usr.px = 0; usr.py = 0; });
+canvas.addEventListener('dblclick', resetView);
+function resetView() { usr.tTheta = 0; usr.tPhi = 0; ui.focus = -1; renderSteps(); updateViewBtn(); }
+function updateViewBtn() { $('#viewReset').classList.toggle('show', ui.focus >= 0 || Math.abs(usr.tTheta) > 0.05 || Math.abs(usr.tPhi) > 0.05); }
+$('#viewReset').addEventListener('click', resetView);
+
+/* =========================================================
+   Simulation / Zündsequenz
+   ========================================================= */
+const live = { p: null, pPrev: null, F: 0, thrEff: 0, pa: P0, state: 'ideal' };
+function go(state) {
+  sim.state = state; sim.t = 0;
+  const E = ENG[ui.engine];
+  if (state === 'ignite') {
+    sim.flash = 1;
+    shakeT = RM ? 0 : (E.id === 'solid' ? 0.2 : 0.12);
+    const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; if (!RM) f.classList.add('go');
+    if (E.id === 'solid') { sim.burnT = 0; sim.burnout = 0; }
+  }
+  if (state === 'off' && E.id === 'solid' && sim.burnT > 0) sim.burnout = 2.5;
+  updateIgnite();
+}
+function toggleIgnite() {
+  const E = ENG[ui.engine];
+  if (sim.state === 'off') {
+    if (E.ion) go('hv');
+    else if (E.id === 'solid') { grainScale = 0.55; go('ignite'); }
+    else go('chill');
+  } else if (E.id === 'solid') {
+    // nicht abschaltbar
+  } else {
+    go('shutdown');
+  }
+}
+function simUpdate(dt) {
+  const E = ENG[ui.engine];
+  sim.t += dt;
+  switch (sim.state) {
+    case 'chill': sim.ramp = 0; if (sim.t > 2.0) go('ignite'); break;
+    case 'hv': sim.ramp = 0; sim.hv = Math.min(1, sim.hv + dt / 0.6); if (sim.t > 0.8) go('ionize'); break;
+    case 'ionize': sim.ramp = 0; sim.ionGlow = Math.min(1, sim.ionGlow + dt / 0.8); if (sim.t > 1.0) go('ramp'); break;
+    case 'ignite': sim.ramp = (Math.min(1, sim.t / 0.22)) * 0.2; if (sim.t > 0.22) go(E.id === 'solid' ? 'run' : 'ramp'); break;
+    case 'ramp': sim.ramp = 0.2 + 0.8 * Ease.out3(Math.min(1, sim.t / 1.3)); if (E.ion) sim.ramp = Ease.out3(Math.min(1, sim.t / 1.1)); if (sim.t >= (E.ion ? 1.1 : 1.3)) go('run'); break;
+    case 'run': sim.ramp = 1; break;
+    case 'shutdown': sim.ramp = Math.max(0, sim.ramp - dt / 0.9); if (sim.ramp <= 0) go('off'); break;
+    default: sim.ramp = 0;
+  }
+  if (sim.state !== 'hv' && sim.state !== 'ionize' && sim.state !== 'ramp' && sim.state !== 'run') { sim.hv = Math.max(0, sim.hv - dt); sim.ionGlow = Math.max(0, sim.ionGlow - dt * 0.8); }
+  if (E.ion && (sim.state === 'ramp' || sim.state === 'run')) { sim.hv = 1; sim.ionGlow = 1; }
+  sim.chill = damp(sim.chill, sim.state === 'chill' ? 1 : 0, sim.state === 'chill' ? 2.5 : 1.2, dt);
+  sim.flash = Math.max(0, sim.flash - dt * 3.2);
+  sim.thrAct = damp(sim.thrAct, ui.thr / 100, 3.5, dt);
+  if (sim.burnout > 0) sim.burnout -= dt;
+  let thrEff;
+  if (E.id === 'solid') {
+    const burning = sim.state === 'ignite' || sim.state === 'run';
+    if (burning) sim.burnT += dt;
+    const u = sim.burnT / E.burn;
+    thrEff = burning ? Math.max(sim.state === 'ignite' ? sim.ramp : 0, burnCurve(u)) : 0;
+    if (burning) grainScale = lerp(0.55, 1.75, smooth(0, 1, u));
+    if (burning && u >= 1) go('off');
+    sim.ramp = burning ? 1 : 0;
+  } else {
+    thrEff = sim.thrAct * sim.ramp;
+  }
+  live.thrEff = thrEff;
+  live.pa = E.ion ? 0 : paFromAlt(ui.alt);
+  const preview = perf(E, E.id === 'solid' ? 1 : ui.thr / 100, ui.ofm, ui.eps, live.pa);
+  live.pPrev = thrEff > 0.002 ? perf(E, thrEff, ui.ofm, ui.eps, live.pa) : preview;
+  live.p = thrEff > 0.002 ? live.pPrev : null;
+  live.F = live.p ? Math.max(0, live.p.F) : 0;
+  live.state = xState(E, live.pPrev, live.pa);
+  live.preview = preview;
+}
+
+/* Strahlparameter aus der Physik ableiten */
+function updatePlume(dt, t) {
+  const E = ENG[ui.engine];
+  const p = live.pPrev, pa = live.pa;
+  const thrEff = live.thrEff;
+  const running = thrEff > 0.002;
+  const L = E.ion ? 0 : pa < 0.004 ? 3.2 : clamp(Math.log(Math.max(1e-4, p.pe) / pa), -2.5, 3.2);
+  const k = 4;
+  const intTarget = running ? (E.ion ? 0.55 + 0.45 * thrEff : (0.3 + 0.7 * Math.pow(thrEff, 0.8)) * (E.id === 'solid' ? 1.35 : 1)) * (1 + sim.flash * 1.4) : 0;
+  PL.int = damp(PL.int, intTarget, running ? 6 : 3.5, dt);
+  PL.re = vis.eR;
+  const Me = p.Me || 3;
+  const spT = E.ion ? 2 : 2 * vis.eR * 0.42 * Math.sqrt(Math.max(0.2, Me * Me - 1)) * Math.exp(0.28 * L);
+  PL.sp = damp(PL.sp, clamp(spT, 0.5, 5.5), k, dt);
+  const diaT = E.ion ? 0 : smooth(0.06, 0.5, Math.abs(L)) * smooth(0, 0.1, pa) * (L < 0 ? 1 : 0.8);
+  PL.dia = damp(PL.dia, diaT, k, dt);
+  PL.pinch = damp(PL.pinch, E.ion ? 0 : clamp(-L * 0.9, 0, 1), k, dt);
+  PL.spread = damp(PL.spread, E.ion ? 0.05 : 0.03 + 0.4 * smooth(0.3, 3.2, L), k, dt);
+  PL.bulge = damp(PL.bulge, E.ion ? 0 : 0.45 * smooth(1.0, 3.2, L), k, dt);
+  const lenT = E.ion ? 9 : (4.8 + 4.2 * thrEff) * (1 + 0.22 * smooth(1, 3, L)) * (E.id === 'solid' ? 1.15 : 1);
+  PL.len = damp(PL.len, lenT, 3, dt);
+  const sootT = E.plume.soot + (E.id === 'solid' ? 0 : clamp((1 - ui.ofm) * 1.6, 0, 0.5) - clamp((ui.ofm - 1) * 0.8, 0, 0.25));
+  PL.soot = damp(PL.soot, clamp(sootT, 0, 1), k, dt);
+  PL.dens = damp(PL.dens, E.plume.dens, k, dt);
+  PL.ion = damp(PL.ion, E.ion ? 1 : 0, k, dt);
+  PL.flick = damp(PL.flick, live.state === 'sep' ? 1 : 0, k, dt);
+  const oxShift = clamp((ui.ofm - 1) * 2.5, -0.6, 0.6);
+  for (let i = 0; i < 3; i++) {
+    PL.core[i] = damp(PL.core[i], E.plume.core[i], k, dt);
+    PL.mid[i] = damp(PL.mid[i], E.plume.mid[i] + (i === 2 ? oxShift * 0.35 : -oxShift * 0.1), k, dt);
+    PL.edge[i] = damp(PL.edge[i], E.plume.edge[i] + (i === 2 ? oxShift * 0.5 : i === 0 ? -oxShift * 0.3 : 0), k, dt);
+  }
+  const u = plumeMat.uniforms;
+  u.uTime.value = t; u.uInt.value = PL.int * (RM ? 0.95 : 1); u.uRe.value = PL.re; u.uLen.value = PL.len;
+  u.uSpread.value = PL.spread; u.uBulge.value = PL.bulge; u.uPinch.value = PL.pinch; u.uDiaAmp.value = PL.dia; u.uDiaSp.value = PL.sp;
+  u.uSoot.value = PL.soot; u.uDens.value = PL.dens; u.uIon.value = PL.ion; u.uFlick.value = PL.flick;
+  u.uCoreLen.value = E.ion ? 4 : 0.9 + vis.eR * 0.9 + 1.2 * thrEff; u.uChill.value = sim.chill * (E.ion || E.id === 'solid' ? 0 : 1);
+  u.uSpeed.value = RM ? 2.5 : (E.ion ? 14 : 6 + 4 * thrEff);
+  u.uCore.value.setRGB(PL.core[0], PL.core[1], PL.core[2]); u.uMid.value.setRGB(PL.mid[0], PL.mid[1], PL.mid[2]); u.uEdge.value.setRGB(PL.edge[0], PL.edge[1], PL.edge[2]);
+  const len = Math.min(13, PL.len * 1.08);
+  const Rmax = Math.min(2.3, vis.eR * 1.25 + PL.spread * len + PL.bulge * Math.sqrt(len * vis.eR) + 0.25);
+  plume.position.set(geom.exitX, 0, 0); plume.scale.set(len, Rmax, Rmax);
+  u.uScale.value.set(len, Rmax, Rmax);
+  plume.visible = PL.int > 0.002 || sim.chill > 0.01;
+  plume.updateMatrixWorld();
+  u.uCam.value.copy(camera.position); plume.worldToLocal(u.uCam.value);
+  // Gasgenerator-Abgas
+  const gg = ggMat.uniforms;
+  const ggOn = ui.engine === 'merlin' && ui.level >= 2;
+  gg.uInt.value = damp(gg.uInt.value, ggOn && running ? 0.5 + 0.5 * thrEff : 0, 4, dt);
+  gg.uTime.value = t; gg.uSpeed.value = RM ? 1.5 : 4;
+  ggPlume.visible = gg.uInt.value > 0.01;
+  ggPlume.position.copy(GG_EXIT); ggPlume.scale.set(2.8, 0.75, 0.75); gg.uScale.value.set(2.8, 0.75, 0.75);
+  ggPlume.updateMatrixWorld();
+  gg.uCam.value.copy(camera.position); ggPlume.worldToLocal(gg.uCam.value);
+  // Licht
+  const lc = new THREE.Color(E.plume.light);
+  plumeLight.color.lerp(lc, 0.08);
+  plumeLight.intensity = PL.int * (E.ion ? 9 : E.id === 'solid' ? 95 : 70) * (RM ? 1 : 0.92 + 0.08 * Math.sin(t * 37));
+  plumeLight.position.set(geom.exitX + 1.2, 0, 0.4);
+  flashLight.position.set(geom.exitX - 0.5, 0, 0.8);
+  flashLight.intensity = sim.flash * 260;
+  glowMat.uniforms.uX0.value = geom.exitX; glowMat.uniforms.uLen.value = PL.len; glowMat.uniforms.uI.value = PL.int * (E.ion ? 0.25 : 1); glowMat.uniforms.uCol.value.copy(plumeLight.color);
+  dustMat.uniforms.uTime.value = t; dustMat.uniforms.uX.value = geom.exitX; dustMat.uniforms.uI.value = PL.int; dustMat.uniforms.uCol.value.copy(plumeLight.color);
+  // Innenglühen + Reif
+  const glowI = E.ion ? 0.05 + sim.ionGlow * 1.3 + sim.hv * 0.2 : 0.06 + PL.int * 1.7;
+  innerMat.color.setScalar(glowI);
+  outerMat.emissive.setRGB(0.1 * sim.chill, 0.2 * sim.chill, 0.32 * sim.chill);
+  grainMat.emissiveIntensity = ui.engine === 'solid' ? PL.int * 1.6 + 0.05 : 0;
+  gridMat.emissive.setRGB(0.25 * sim.hv, 0.15 * sim.hv, 0.6 * sim.hv);
+  M.hotPart.emissive.setRGB(0.6 * PL.int, 0.22 * PL.int, 0.05 * PL.int);
+  if (M.preF) { M.preF.emissive.setRGB(0.5 * PL.int, 0.16 * PL.int, 0.02 * PL.int); M.preO.emissive.setRGB(0.12 * PL.int, 0.3 * PL.int, 0.5 * PL.int); }
+  if (grain) grain.scale.set(grain.scale.x, grainScale * (parts.find((q) => q.obj === grain).k || 0.0001), grainScale * (parts.find((q) => q.obj === grain).k || 0.0001));
+}
+
+/* =========================================================
+   DOM / UI
+   ========================================================= */
+const el = {
+  levels: $('#levels'), lvPill: $('#lvPill'), cards: $('#cards'), steps: $('#steps'),
+  hudKicker: $('#hudKicker'), hudName: $('#hudName'), hudEx: $('#hudEx'), aboutTag: $('#aboutTag'), aboutTxt: $('#aboutTxt'),
+  status: $('#status'), statusTxt: $('#statusTxt'), xpill: $('#xpill'), xName: $('#xName'), xSub: $('#xSub'), xpath: $('#xpath'),
+  lcd: $('#lcd'), roF: $('#roF'), roFU: $('#roFU'), roTag: $('#roTag'), meter: $('#meter'), roIsp: $('#roIsp'), roPc: $('#roPc'), roPcK: $('#roPcK'), roPcU: $('#roPcU'),
+  roMd: $('#roMd'), roMdU: $('#roMdU'), roPe: $('#roPe'), roPeK: $('#roPeK'), roPeU: $('#roPeU'), roMode: $('#roMode'),
+  ignite: $('#ignite'), igMain: $('#igMain'), igSub: $('#igSub'),
+  inThr: $('#inThr'), inOF: $('#inOF'), inEps: $('#inEps'), inPa: $('#inPa'),
+  vThr: $('#vThr'), vOF: $('#vOF'), vEps: $('#vEps'), vPa: $('#vPa'),
+  fThr: $('#fThr'), fOF: $('#fOF'), fEps: $('#fEps'), fPa: $('#fPa'),
+  explain: $('#explain'), exMini: $('#exMini'), formulas: $('#formulas'), fxMini: $('#fxMini'), ctlMini: $('#ctlMini'),
+  place: $('#place'), placeNote: $('#placeNote'),
+};
+for (let i = 0; i < 24; i++) { const s = document.createElement('i'); if (i >= 17) s.className = i >= 21 ? 'h' : 'w'; el.meter.appendChild(s); }
+const meterSegs = Array.from(el.meter.children);
+
+// Karten
+for (const id of ORDER) {
+  const E = ENG[id];
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'card'; b.dataset.eng = id; b.setAttribute('aria-pressed', id === ui.engine ? 'true' : 'false');
+  b.innerHTML = ICONS[id] + '<div><div class="c-no">PRÜFLING ' + E.no + '</div><div class="c-name">' + E.name + '</div><div class="c-sub">' + E.card + '</div></div><span class="c-led"></span>';
+  b.addEventListener('click', () => setEngine(id));
+  el.cards.appendChild(b);
+}
+
+// Stufen-Umschalter
+function placePill() {
+  const btn = el.levels.querySelector('button[aria-checked="true"]');
+  if (!btn) return;
+  el.lvPill.style.width = btn.offsetWidth + 'px';
+  el.lvPill.style.transform = 'translateX(' + btn.offsetLeft + 'px)';
+}
+el.levels.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setLevel(+b.dataset.level); });
+el.levels.addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  e.preventDefault();
+  const n = clamp(ui.level + (e.key === 'ArrowRight' ? 1 : -1), 1, 3); setLevel(n);
+  el.levels.querySelector('button[data-level="' + n + '"]').focus();
+});
+
+function setLevel(l) {
+  if (l === ui.level) return;
+  ui.level = l;
+  document.body.dataset.level = String(l);
+  el.levels.querySelectorAll('button').forEach((b) => { const on = +b.dataset.level === l; b.setAttribute('aria-checked', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; });
+  placePill();
+  applyLevelUI();
+  syncParts();
+  buildLabels();
+  tween(cutPlane, { constant: l === 3 ? 0 : 6 }, { dur: 1.4, ease: Ease.inOut3, delay: l === 3 ? 0.3 : 0 });
+  renderSteps(); renderInfo(true);
+}
+function applyLevelUI() {
+  document.querySelectorAll('.rv').forEach((r) => {
+    const min = +(r.dataset.min || 1), max = +(r.dataset.max || 3);
+    r.classList.toggle('hide', ui.level < min || ui.level > max);
+  });
+  document.querySelectorAll('[data-t1]').forEach((n) => {
+    const t = n.dataset['t' + ui.level] || (ui.level === 3 ? n.dataset.t2 : null) || n.dataset.t1;
+    if (t && n.textContent !== t) n.textContent = t;
+  });
+  const E = ENG[ui.engine];
+  $('#lblThr').textContent = ui.level === 1 ? 'Gas geben' : E.ion ? 'Leistung (PPU)' : 'Gashebel / Drossel';
+  el.ctlMini.textContent = ui.level === 1 ? '1 Regler' : '4 Kanäle';
+  $('#hThr').textContent = E.ion ? 'Die Stromversorgung (PPU) stellt mehr oder weniger Leistung bereit: mehr Ionen pro Sekunde → mehr Schub. Die Austrittsgeschwindigkeit bleibt fast gleich.'
+    : 'Regelt den Kammerdruck pᶜ und damit den Massenstrom ṁ. Weniger Druck → kleineres pₑ → auf Meereshöhe schneller überexpandiert.';
+  $('#hOF').textContent = 'Verhältnis Oxidator zu Brennstoff. Abseits des Optimums sinkt die Verbrennungsqualität (c*) und damit der Isp. Brennstoffreich: rußiger, oranger Strahl – oxidatorreich: klarer, bläulicher.';
+  $('#hEps').textContent = 'ε = Aₑ / A*: wie stark sich die Düse hinter dem Hals weitet. Großes ε lohnt sich im Vakuum; auf Meereshöhe droht Überexpansion.';
+  $('#hPa').textContent = 'Luftdruck um die Düse. Er drückt gegen den Abgasstrahl – im Schub steckt der Term (pₑ − pₐ)·Aₑ.';
+}
+
+// Prüfling wechseln
+function setEngine(id) {
+  if (id === ui.engine || switching) return;
+  const prev = ENG[ui.engine], E = ENG[id];
+  if (sim.state !== 'off') { sim.state = 'off'; sim.ramp = 0; }
+  sim.burnT = 0; sim.burnout = 0; grainScale = 0.55;
+  for (const p of P) p.act = false;
+  switching = true;
+  ui.engine = id; ui.focus = -1;
+  if (E.ion && !prev.ion) ui.altBeforeIon = ui.alt;
+  if (E.ion) ui.alt = 100; else if (prev.ion) ui.alt = ui.altBeforeIon;
+  ui.eps = E.ion ? 1 : E.eps; ui.ofm = 1; ui.thr = 100; sim.thrAct = 1;
+  el.cards.querySelectorAll('.card').forEach((c) => c.setAttribute('aria-pressed', c.dataset.eng === id ? 'true' : 'false'));
+  syncControls();
+  syncParts();
+  const target = visTarget(E, E.ion ? 1 : E.eps);
+  tween(vis, target, { dur: 1.5, ease: Ease.inOut3, onUpdate: () => { profDirty = true; }, onComplete: () => { switching = false; buildLabels(); } });
+  scanRing.visible = true; scanState.t = 0; scanState.on = !RM;
+  const oc = new THREE.Color(E.outer.c);
+  const om = { r: outerMat.color.r, g: outerMat.color.g, b: outerMat.color.b, m: outerMat.metalness, ro: outerMat.roughness };
+  tween(om, { r: oc.r, g: oc.g, b: oc.b, m: E.outer.m, ro: E.outer.r }, { dur: 1.2, onUpdate: () => { outerMat.color.setRGB(om.r, om.g, om.b); outerMat.metalness = om.m; outerMat.roughness = om.ro; } });
+  innerMat.map = E.ion ? texIon : E.id === 'solid' ? texSolid : texWarm; innerMat.needsUpdate = true;
+  chart.data.length = 0;
+  labelsEl.innerHTML = ''; labels = [];
+  applyLevelUI();
+  renderInfo(true); renderSteps(); updateIgnite(); resetView();
+}
+
+function syncControls() {
+  const E = ENG[ui.engine];
+  // Drossel
+  el.inThr.min = E.ion ? 30 : 40; el.inThr.max = 100; el.inThr.value = ui.thr;
+  $('#sThrA').textContent = E.ion ? nf(E.Pmax * 0.3, 1) + ' kW' : '40 %';
+  $('#sThrB').textContent = E.ion ? nf(E.Pmax, 1) + ' kW' : '100 %';
+  setLock(el.fThr, el.inThr, E.id === 'solid', 'nicht abschaltbar', 'Nicht abschaltbar: Der Treibsatz brennt nach der Zündung bis zum Ende. Den Schubverlauf legt die Form des Brennkanals fest – nicht ein Gashebel.');
+  setLock(el.fOF, el.inOF, E.id === 'solid' || E.ion, E.ion ? 'kein Oxidator' : 'im Treibsatz festgelegt',
+    E.ion ? 'Kein Oxidator: Xenon wird nicht verbrannt, sondern elektrisch beschleunigt.' : 'Im Treibsatz festgelegt: Oxidator (Ammoniumperchlorat) und Brennstoff sind fest miteinander vergossen.');
+  setLock(el.fEps, el.inEps, E.ion, 'keine Düse', 'Keine Lavaldüse: Beim Ionentriebwerk beschleunigen die Spannungsgitter die Ionen – nicht die Düsenform.');
+  setLock(el.fPa, el.inPa, E.ion, 'nur im Vakuum', 'Funktioniert nur im Vakuum: Getestet wird in einer Vakuumkammer.');
+  el.inOF.value = Math.round(ui.ofm * 100);
+  if (!E.ion) {
+    el.inEps.min = E.epsMin; el.inEps.max = E.epsMax; el.inEps.value = ui.eps;
+    $('#sEpsA').textContent = nf(E.epsMin, 0); $('#sEpsB').textContent = nf(E.epsMax, 0);
+    $('#optEps').style.left = (((E.eps - E.epsMin) / (E.epsMax - E.epsMin)) * 100).toFixed(1) + '%';
+    $('#optEps').style.opacity = '.8';
+  } else { $('#optEps').style.opacity = '0'; }
+  el.inPa.value = ui.alt;
+  el.place.querySelectorAll('button').forEach((b) => { b.disabled = E.ion && b.dataset.p === '0'; });
+  el.placeNote.textContent = E.ion ? 'Ein Ionentriebwerk funktioniert nur im Weltall – auf der Erde testet man es in einer Vakuumkammer.' : '';
+  refreshFaderLabels();
+}
+function setLock(wrap, input, locked, short, tip) {
+  wrap.classList.toggle('locked', locked);
+  input.disabled = locked;
+  wrap.tabIndex = locked ? 0 : -1;
+  wrap.querySelector('.f-lock span').textContent = short;
+  wrap.querySelector('.f-tip').textContent = locked ? tip : '';
+  if (locked) wrap.setAttribute('aria-label', short + ' – ' + tip); else wrap.removeAttribute('aria-label');
+}
+// Antippen zeigt Tooltip auf Touch
+for (const f of [el.fThr, el.fOF, el.fEps, el.fPa]) {
+  f.addEventListener('click', () => { if (!f.classList.contains('locked')) return; f.classList.add('tip'); clearTimeout(f._tt); f._tt = setTimeout(() => f.classList.remove('tip'), 3200); });
+}
+function setFill(input) { const p = ((+input.value - +input.min) / (+input.max - +input.min)) * 100; input.style.setProperty('--p', p.toFixed(1) + '%'); }
+function refreshFaderLabels() {
+  const E = ENG[ui.engine];
+  el.vThr.textContent = E.id === 'solid' ? 'fest' : E.ion ? nf((E.Pmax * ui.thr) / 100, 2) + ' kW' : ui.thr + ' %';
+  const d = Math.round((ui.ofm - 1) * 100);
+  el.vOF.textContent = E.id === 'solid' || E.ion ? '—' : d === 0 ? 'optimal' : (d < 0 ? 'Brennst. −' : 'Oxid. +') + Math.abs(d) + ' %';
+  el.vEps.textContent = E.ion ? '—' : nf(ui.eps, 1);
+  const pa = E.ion ? 0 : paFromAlt(ui.alt);
+  el.vPa.textContent = pa <= 0 ? 'Vakuum' : nf(pa, pa < 0.1 ? 3 : 2) + ' bar';
+  $('#sPaMid').textContent = pa <= 0 ? 'Weltraum' : ui.alt < 0.5 ? 'Meereshöhe' : 'ca. ' + nf(altKm(ui.alt), 0) + ' km Höhe';
+  el.place.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', (pa <= 0) === (b.dataset.p === '100') ? 'true' : 'false'));
+  [el.inThr, el.inOF, el.inEps, el.inPa].forEach(setFill);
+}
+el.inThr.addEventListener('input', () => { ui.thr = +el.inThr.value; refreshFaderLabels(); });
+el.inOF.addEventListener('input', () => { ui.ofm = +el.inOF.value / 100; refreshFaderLabels(); });
+el.inEps.addEventListener('input', () => {
+  ui.eps = +el.inEps.value; refreshFaderLabels();
+  const tg = visTarget(ENG[ui.engine], ui.eps);
+  tween(vis, { eR: tg.eR, nL: tg.nL }, { dur: 0.5, ease: Ease.out3, onUpdate: () => { profDirty = true; } });
+});
+el.inPa.addEventListener('input', () => { ui.alt = +el.inPa.value; refreshFaderLabels(); });
+el.place.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  ui.alt = +b.dataset.p; el.inPa.value = ui.alt; refreshFaderLabels();
+});
+el.ignite.addEventListener('click', toggleIgnite);
+
+function renderInfo(anim) {
+  const E = ENG[ui.engine];
+  el.hudKicker.textContent = 'Prüfling ' + E.no + ' · ' + E.cycle;
+  el.hudName.textContent = E.name;
+  el.hudEx.textContent = E.example;
+  el.aboutTag.textContent = E.tag;
+  el.aboutTxt.textContent = E.txt[ui.level];
+  if (anim && !RM) for (const n of [el.hudKicker, el.hudName, el.hudEx, el.aboutTxt]) { n.classList.remove('swap'); void n.offsetWidth; n.classList.add('swap'); }
+}
+
+/* Ablauf-Schritte */
+const STEPS = {
+  liquid: [['Treibstoff fließt', 'Förderung', 'Turbopumpe → hoher Druck'], ['Mischen & brennen', 'Einspritzen & Verbrennen', 'Verbrennung ca. 3500 K'], ['Trichter macht schnell', 'Lavaldüse', 'Ma = 1 im Hals'], ['Strahl schiebt', 'Abgasstrahl → Schub', 'F = ṁ·vₑ + (pₑ−pₐ)·Aₑ']],
+  solid: [['Fester Treibstoff', 'Treibsatz (Grain)', 'APCP-Grain'], ['Kanal brennt ab', 'Abbrand im Kanal', 'r = a·pᶜⁿ'], ['Trichter macht schnell', 'Lavaldüse', 'Ma = 1 im Hals'], ['Strahl schiebt', 'Abgasstrahl → Schub', 'F = ṁ·vₑ + (pₑ−pₐ)·Aₑ']],
+  ion: [['Xenon-Gas', 'Xenon-Zufuhr', 'Xe-Massenstrom ṁ'], ['Aufladen', 'Ionisierung', 'Elektronenstoß-Ionisation'], ['Gitter-Schleuder', 'Gitter beschleunigen', 'ca. 1 kV → 30–40 km/s'], ['Strahl + Elektronen', 'Strahl + Neutralisator', 'Neutralisator: e⁻ → Strahl']],
+};
+function renderSteps() {
+  const E = ENG[ui.engine];
+  const set = E.ion ? STEPS.ion : E.id === 'solid' ? STEPS.solid : STEPS.liquid;
+  el.steps.innerHTML = '';
+  set.forEach((s, i) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.step = String(i); b.setAttribute('aria-pressed', ui.focus === i ? 'true' : 'false');
+    b.innerHTML = '<b>' + (i + 1) + '</b><span>' + s[ui.level - 1] + '</span>';
+    b.title = s[ui.level - 1];
+    b.addEventListener('click', () => { ui.focus = ui.focus === i ? -1 : i; usr.tTheta = 0; usr.tPhi = 0; renderSteps(); updateViewBtn(); });
+    li.appendChild(b); el.steps.appendChild(li);
+  });
+}
+let stepPhase = 0;
+function updateSteps(dt) {
+  const running = live.thrEff > 0.002;
+  stepPhase = running ? stepPhase + dt * 0.75 : 0;
+  const idx = running ? Math.floor(stepPhase) % 4 : -1;
+  const btns = el.steps.querySelectorAll('button');
+  btns.forEach((b, i) => b.classList.toggle('on', i === idx || (ui.focus === i)));
+}
+
+/* Messwerte & Texte */
+function fmtForce(F) {
+  const E = ENG[ui.engine];
+  return [nf(F / E.unit.div, E.unit.d), E.unit.u];
+}
+function fmtForceStr(F) { const a = fmtForce(F); return a[0] + ' ' + a[1]; }
+const XS = {
+  over: { n: 'Überexpandiert', s: 'pₑ < pₐ · Strahl eingeschnürt', d: 'M8 7 C16 9 20 10.5 26 10.5 C32 10.5 38 10 44 10 L44 12 C38 12 32 11.5 26 11.5 C20 11.5 16 13 8 15 Z' },
+  sep: { n: 'Strömungsablösung', s: 'pₑ ≪ pₐ · stark überexpandiert', d: 'M8 7 C12 10 18 10.8 24 10.8 C32 10.8 38 10.6 44 10.6 L44 11.4 C38 11.4 32 11.2 24 11.2 C18 11.2 12 12 8 15 Z' },
+  ideal: { n: 'Angepasst', s: 'pₑ ≈ pₐ · ideal', d: 'M8 7 C20 7 30 6.6 44 6.4 L44 15.6 C30 15.4 20 15 8 15 Z' },
+  under: { n: 'Unterexpandiert', s: 'pₑ > pₐ · Strahl weitet sich', d: 'M8 7 C14 4 24 2.5 44 1.5 L44 20.5 C24 19.5 14 18 8 15 Z' },
+  vac: { n: 'Vakuum', s: 'pₐ = 0 · Strahl bläht auf', d: 'M8 7 C10 1 22 0.5 44 0.2 L44 21.8 C22 21.5 10 21 8 15 Z' },
+  ion: { n: 'Elektrostatisch', s: 'Gitter beschleunigen Ionen', d: 'M8 8.5 C20 8.6 30 8.6 44 8.7 L44 13.3 C30 13.4 20 13.4 8 13.5 Z' },
+};
+const XS1 = { over: 'Luft drückt den Strahl zusammen', sep: 'Luft drückt sehr stark dagegen', ideal: 'Passt genau!', under: 'Strahl wird breiter', vac: 'Weltall – keine Luft', ion: 'Elektrischer Antrieb' };
+let lastX = '';
+function updateReadouts() {
+  const E = ENG[ui.engine];
+  const p = live.p, pv = live.pPrev;
+  const running = !!p;
+  el.lcd.classList.toggle('off', !running);
+  const fF = fmtForce(live.F);
+  el.roF.textContent = fF[0]; el.roFU.textContent = fF[1];
+  const Fref = Math.max(1e-9, perf(E, 1, 1, E.ion ? 1 : E.eps, 0).F * 1.12);
+  const lit = Math.round(clamp(live.F / Fref, 0, 1) * 24);
+  meterSegs.forEach((s, i) => s.classList.toggle('on', i < lit));
+  el.roIsp.textContent = running ? nf(p.isp, 0) : '–';
+  if (E.ion) { el.roPcK.textContent = 'Leistung P'; el.roPc.textContent = running ? nf(p.P, 2) : '–'; el.roPcU.textContent = 'kW'; }
+  else { el.roPcK.textContent = ui.level === 1 ? 'Druck in der Kammer' : 'Kammerdruck pᶜ'; el.roPc.textContent = running ? nf(p.pc, 0) : '–'; el.roPcU.textContent = 'bar'; }
+  if (E.ion) { el.roMd.textContent = running ? nf(p.md * 1e6, 2) : '–'; el.roMdU.textContent = 'mg/s'; el.roPeK.textContent = 'Austrittsgeschw. vₑ'; el.roPe.textContent = running ? nf(p.ve / 1000, 1) : '–'; el.roPeU.textContent = 'km/s'; }
+  else { el.roMd.textContent = running ? nf(p.md, 0) : '–'; el.roMdU.textContent = 'kg/s'; el.roPeK.textContent = 'Austrittsdruck pₑ'; el.roPe.textContent = nf(pv.pe, 2); el.roPeU.textContent = 'bar'; }
+  el.roTag.textContent = running ? 'live' : 'aus';
+  el.roMode.textContent = E.ion ? 'Mikro-Schubwaage' : 'Kraftmessdose';
+  const xs = XS[live.state];
+  if (lastX !== live.state + ui.level) {
+    lastX = live.state + ui.level;
+    el.xpill.dataset.x = live.state;
+    el.xName.textContent = ui.level === 1 ? XS1[live.state] : xs.n;
+    el.xSub.textContent = ui.level === 1 ? (live.state === 'ion' ? 'kein Feuer' : '') : xs.s;
+    el.xpath.setAttribute('d', xs.d);
+  }
+  // Status
+  const st = sim.state;
+  let s = 'off', txt = 'BEREIT';
+  if (st === 'chill') { s = 'warn'; txt = 'VORKÜHLEN'; }
+  else if (st === 'hv') { s = 'ion'; txt = 'HOCHSPANNUNG'; }
+  else if (st === 'ionize') { s = 'ion'; txt = 'IONISIERUNG'; }
+  else if (st === 'ignite') { s = 'hot'; txt = 'ZÜNDUNG'; }
+  else if (st === 'ramp') { s = E.ion ? 'ion' : 'hot'; txt = E.ion ? 'STRAHL BAUT AUF' : 'HOCHLAUF'; }
+  else if (st === 'run') { s = E.ion ? 'ion' : 'run'; txt = E.id === 'solid' ? 'BRENNT · ' + nf(Math.max(0, E.burn - sim.burnT), 0) + ' s' : E.ion ? 'STRAHL AKTIV' : 'LÄUFT · ' + ui.thr + ' %'; }
+  else if (st === 'shutdown') { s = 'warn'; txt = 'ABSCHALTEN'; }
+  else if (sim.burnout > 0) { s = 'warn'; txt = 'BRENNSCHLUSS'; }
+  if (el.status.dataset.s !== s) el.status.dataset.s = s;
+  if (el.statusTxt.textContent !== txt) el.statusTxt.textContent = txt;
+  if (E.id === 'solid' && (st === 'run' || st === 'ignite')) el.igSub.textContent = 'Brennschluss in ' + nf(Math.max(0, E.burn - sim.burnT), 0) + ' s (zeitlich gerafft)';
+}
+function updateIgnite() {
+  const E = ENG[ui.engine];
+  const st = sim.state;
+  const b = el.ignite;
+  b.classList.remove('is-run', 'is-ion', 'is-burn');
+  b.disabled = false;
+  if (st === 'off') {
+    if (E.ion) { b.classList.add('is-ion'); el.igMain.textContent = 'Einschalten'; el.igSub.textContent = 'Hochspannung → Ionisierung → Strahl'; }
+    else if (E.id === 'solid') { el.igMain.textContent = 'Zünden'; el.igSub.textContent = 'Achtung: einmal gezündet, nicht abschaltbar'; }
+    else { el.igMain.textContent = 'Zünden'; el.igSub.textContent = 'Vorkühlen → Zündung → Hochlauf'; }
+  } else if (E.id === 'solid') {
+    b.classList.add('is-burn'); b.disabled = true; el.igMain.textContent = 'Brennt – nicht abschaltbar';
+  } else if (st === 'shutdown') {
+    el.igMain.textContent = 'Fährt herunter …'; el.igSub.textContent = 'Ventile schließen'; b.disabled = true;
+  } else {
+    b.classList.add(E.ion ? 'is-ion' : 'is-run');
+    el.igMain.textContent = E.ion ? 'Ausschalten' : 'Abschalten';
+    el.igSub.textContent = st === 'chill' ? 'Leitungen werden mit LOX gekühlt …' : E.ion ? 'Hochspannung trennen' : 'Treibstoffventile schließen';
+  }
+}
+
+function narrate() {
+  const E = ENG[ui.engine];
+  const p = live.pPrev, pa = live.pa;
+  const running = !!live.p;
+  const st = live.state;
+  const l = ui.level;
+  const out = [];
+  if (l === 1) {
+    if (!running) {
+      if (sim.state === 'chill') out.push('<p class="big">Erst wird alles eiskalt gemacht …</p><p>Der flüssige Sauerstoff ist so kalt, dass die Leitungen vorher abgekühlt werden. Siehst du den Nebel?</p>');
+      else if (E.ion) out.push('<p class="big">Drück auf „Einschalten“.</p><p>Hier gibt es kein Feuer: Das Gas wird elektrisch aufgeladen und weggeschleudert.</p>');
+      else if (E.id === 'solid') out.push('<p class="big">Drück auf „Zünden“ – aber Vorsicht!</p><p>Einmal gezündet, brennt der Booster bis zum Ende. Ausschalten geht nicht.</p>');
+      else out.push('<p class="big">Drück auf „Zünden“ und schau, was passiert.</p><p>Danach kannst du mit „Gas geben“ den Schub verändern.</p>');
+    } else {
+      if (E.ion) out.push('<p class="big">So sanft wie ein Blatt Papier.</p><p>Der Schub ist winzig – aber er hält monatelang an. Mehr Leistung = etwas mehr Schub.</p>');
+      else if (E.id === 'solid') out.push('<p class="big">Volle Kraft – und nicht zu bremsen.</p><p>Der Treibstoff brennt von innen nach außen. Den Gashebel gibt es hier nicht.</p>');
+      else out.push('<p class="big">Mehr Gas = mehr Schub.</p><p>Wie ein Luftballon, den man loslässt: Das Gas schießt nach hinten, das Triebwerk wird nach vorne gedrückt.</p>');
+      if (st === 'over' || st === 'sep') out.push('<p>Unten auf der Erde ist die Luft dick: Sie drückt den Strahl zusammen – siehst du die <b>leuchtenden Rauten</b>?</p>');
+      else if (st === 'vac') out.push('<p>Im Weltall fehlt die Luft drumherum: Der Strahl plustert sich auf. Und trotzdem schiebt die Rakete – <b>sie braucht keine Luft zum Abstoßen</b>.</p>');
+      else if (st === 'ideal') out.push('<p>Jetzt passt der Strahl genau: nicht zu eng, nicht zu breit.</p>');
+      else if (st === 'under') out.push('<p>Die Luft wird dünner – der Strahl wird breiter.</p>');
+    }
+    return out.join('');
+  }
+  if (E.ion) {
+    out.push('<p>' + (running ? 'Xenon wird in der Entladungskammer durch Elektronenstöße <b>ionisiert</b>. Die Gitter beschleunigen die Ionen auf ca. ' + nf(p.ve / 1000, 1) + ' km/s; der <b>Neutralisator</b> schießt Elektronen hinterher.' : 'Bereit. Beim Einschalten: Hochspannung an die Gitter, dann Ionisierung, dann Strahl.') + '</p>');
+    out.push('<p>' + (l === 3 ? 'Kein Druckterm, kein ε: F = ṁ·vₑ. Der Ionenstrom ist durch Raumladung begrenzt (Child-Langmuir) – daher der winzige Schub trotz Isp ≈ 3100 s.' : 'Funktioniert nur im Vakuum. Der Schub ist winzig, dafür ist der Treibstoffverbrauch extrem gering.') + '</p>');
+    return out.join('');
+  }
+  if (sim.state === 'chill') out.push('<p><b>Chill-down:</b> Flüssigsauerstoff kühlt Leitungen und Turbopumpe vor, damit er beim Start nicht verdampft. Der Kaltdampf sinkt zu Boden.</p>');
+  const ratio = pa > 0 ? p.pe / pa : Infinity;
+  const pt = p.Fp, share = p.F !== 0 ? (pt / Math.max(1, Math.abs(p.F))) * 100 : 0;
+  const pref = running ? '' : 'Vorschau: ';
+  if (st === 'over' || st === 'sep') {
+    out.push('<p>' + pref + '<b>Überexpandiert:</b> Der Abgasdruck pₑ ist kleiner als der Umgebungsdruck pₐ. Die Luft schnürt den Strahl ein – es entstehen <b>Stoßdiamanten</b>. Der Druckterm (pₑ − pₐ)·Aₑ ist negativ und kostet Schub.</p>');
+    if (st === 'sep') out.push('<p class="warn">Starke Überexpansion: Gefahr der Strömungsablösung in der Düse – der Strahl wird unruhig. Kleineres ε oder mehr Kammerdruck hilft.</p>');
+  } else if (st === 'ideal') out.push('<p>' + pref + '<b>Angepasst:</b> pₑ ≈ pₐ. Die Düse ist genau für diese Höhe ausgelegt – kein Druckverlust, kaum Stoßstrukturen.</p>');
+  else if (st === 'under') out.push('<p>' + pref + '<b>Unterexpandiert:</b> pₑ > pₐ. Das Gas expandiert hinter der Düse weiter, der Strahl weitet sich. Ein größeres ε würde hier mehr herausholen.</p>');
+  else if (st === 'vac') out.push('<p>' + pref + '<b>Vakuum:</b> pₐ = 0, der Druckterm hilft voll mit. Der Strahl bläht sich weit auf – deshalb tragen Oberstufen riesige Düsenglocken.</p>');
+  if (E.id !== 'solid' && Math.abs(ui.ofm - 1) > 0.04) out.push('<p>Mischungsverhältnis ' + (ui.ofm < 1 ? 'brennstoffreich' : 'oxidatorreich') + ': Die Verbrennung ist weniger effizient, c* sinkt um ' + nf((1 - (1 - 0.45 * (ui.ofm - 1) ** 2)) * 100, 1) + ' %.' + (ui.ofm < 1 ? ' Der Strahl wird rußiger und oranger.' : ' Heißer Sauerstoff greift Metall an.') + '</p>');
+  if (l === 3) {
+    out.push('<p class="k">pₑ/pₐ = ' + (isFinite(ratio) ? nf(ratio, 2) : '∞') + ' · Druckterm ' + (pt >= 0 ? '+' : '−') + fmtForceStr(Math.abs(pt)) + ' (' + nf(share, 1) + ' %)</p>');
+    const sl = perf(E, E.id === 'solid' ? 1 : ui.thr / 100, ui.ofm, ui.eps, P0), vc = perf(E, E.id === 'solid' ? 1 : ui.thr / 100, ui.ofm, ui.eps, 0);
+    out.push('<p class="k">Isp bei diesem ε: ' + nf(sl.isp, 0) + ' s (Meereshöhe) · ' + nf(vc.isp, 0) + ' s (Vakuum)</p>');
+  }
+  return out.join('');
+}
+let lastNarr = '';
+function updateExplain() {
+  const h = narrate();
+  if (h !== lastNarr) { el.explain.innerHTML = h; lastNarr = h; }
+  el.exMini.textContent = live.p ? 'live' : sim.state === 'off' ? 'bereit' : '…';
+}
+function fxBlock(label, eq, sub, res) { return '<div class="fx"><div class="fx-l">' + label + '</div><div class="fx-eq">' + eq + '</div>' + (sub ? '<div class="fx-sub">' + sub + '</div>' : '') + (res ? '<div class="fx-res">' + res + '</div>' : '') + '</div>'; }
+let lastFx = '';
+function updateFormulas() {
+  if (ui.level !== 3) return;
+  const E = ENG[ui.engine];
+  const p = live.p || live.preview;
+  const pa = live.pa;
+  el.fxMini.textContent = live.p ? 'live' : 'Vorschau bei Nennlast';
+  let h = '';
+  if (E.ion) {
+    h += fxBlock('Schub', 'F = ṁ · vₑ', '= <b>' + nf(p.md * 1e6, 2) + ' mg/s</b> · <b>' + nf(p.ve / 1000, 1) + ' km/s</b>', '= <b>' + nf(p.F * 1000, 1) + ' mN</b>');
+    h += fxBlock('Spezifischer Impuls', 'Isp = vₑ / g₀', '= ' + nf(p.ve, 0) + ' m/s / 9,81 m/s²', '= <b>' + nf(E.isp, 0) + ' s</b>');
+    h += fxBlock('Elektrisch', 'P ≈ ' + nf(p.P, 2) + ' kW', 'Gitterspannung ca. 1 kV · Strom durch Raumladung begrenzt (Child-Langmuir)', '');
+    h += fxBlock('Raketengleichung', 'Δv = vₑ · ln(m₀ / m_f)', 'Dawn: ca. 11 km/s Δv über ca. 11 Jahre', '');
+  } else {
+    const Fm = p.Fm, Fp = p.Fp;
+    h += fxBlock('Schub', 'F = ṁ · vₑ + (pₑ − pₐ) · Aₑ',
+      '= <b>' + nf(p.md, 0) + ' kg/s</b> · <b>' + nf(p.ve, 0) + ' m/s</b> + (<b>' + nf(p.pe, 2) + '</b> − <b>' + nf(pa, 2) + '</b>) bar · <b>' + nf(p.Ae, 3) + ' m²</b>',
+      '= ' + fmtForceStr(Fm) + ' <span class="' + (Fp < 0 ? 'neg' : 'pos') + '">' + (Fp < 0 ? '− ' : '+ ') + fmtForceStr(Math.abs(Fp)) + '</span> = <b>' + fmtForceStr(Math.max(0, p.F)) + '</b>');
+    h += fxBlock('Spezifischer Impuls', 'Isp = F / (ṁ · g₀)', '= ' + fmtForceStr(Math.max(0, p.F)) + ' / (' + nf(p.md, 0) + ' kg/s · 9,81 m/s²)', '= <b>' + nf(p.isp, 0) + ' s</b>');
+    h += fxBlock('Lavaldüse', 'ε = Aₑ / A* = ' + nf(ui.eps, 1) + ' → Mₑ = ' + nf(p.Me, 2),
+      'pₑ = pᶜ · (1 + (γ−1)/2 · Mₑ²)<sup>−γ/(γ−1)</sup> = ' + nf(p.pc, 0) + ' bar · … = <b>' + nf(p.pe, 2) + ' bar</b> (γ = ' + nf(E.g, 2) + ')', '');
+    if (E.id === 'solid') h += fxBlock('Abbrandrate', 'r = a · pᶜⁿ', 'Saint-Robert/Vieille: höherer Kammerdruck → schnellerer Abbrand. Brennfläche × r bestimmt ṁ.', '');
+    else h += fxBlock('Verbrennung', 'c* = pᶜ · A* / ṁ = ' + nf(p.cstar, 0) + ' m/s', 'O/F = ' + nf(ui.ofm, 2) + ' × Optimum → c* ' + (ui.ofm === 1 ? 'maximal' : '−' + nf((0.45 * (ui.ofm - 1) ** 2) * 100, 1) + ' %'), '');
+    h += fxBlock('Raketengleichung', 'Δv = vₑ · ln(m₀ / m_f)', 'mit vₑ,eff = Isp · g₀ = ' + nf(p.isp * G0, 0) + ' m/s', '');
+  }
+  if (h !== lastFx) { el.formulas.innerHTML = h; lastFx = h; }
+}
+
+/* =========================================================
+   Diagramm Schub über Zeit
+   ========================================================= */
+const chart = { cv: $('#chart'), ctx: null, data: [], acc: 0, max: 1 };
+chart.ctx = chart.cv.getContext('2d');
+const CH_N = 450; // 15 s × 30 Hz
+function drawChart() {
+  const cv = chart.cv, ctx = chart.ctx;
+  const w = cv.clientWidth, h = cv.clientHeight, r = Math.min(window.devicePixelRatio || 1, 2);
+  if (cv.width !== Math.round(w * r) || cv.height !== Math.round(h * r)) { cv.width = Math.round(w * r); cv.height = Math.round(h * r); }
+  ctx.setTransform(r, 0, 0, r, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  const E = ENG[ui.engine];
+  const Fref = perf(E, 1, 1, E.ion ? 1 : E.eps, 0).F;
+  let m = 0; for (const v of chart.data) m = Math.max(m, v);
+  const target = Math.max(Fref * 0.6, m * 1.15);
+  chart.max = lerp(chart.max, target, 0.08);
+  const padL = 8, padR = 8, padT = 22, padB = 18;
+  const gw = w - padL - padR, gh = h - padT - padB;
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+  for (let i = 0; i <= 3; i++) { const y = padT + (gh * i) / 3; ctx.beginPath(); ctx.moveTo(padL, Math.round(y) + 0.5); ctx.lineTo(w - padR, Math.round(y) + 0.5); ctx.stroke(); }
+  ctx.setLineDash([]);
+  ctx.font = '700 10px "Space Mono", monospace'; ctx.fillStyle = '#6b737a'; ctx.textBaseline = 'top';
+  ctx.fillText(fmtForceStr(chart.max), padL, 5);
+  ctx.textAlign = 'right'; ctx.fillText('jetzt', w - padR, h - 14); ctx.textAlign = 'left'; ctx.fillText('−15 s', padL, h - 14);
+  const n = chart.data.length;
+  if (n < 2) return;
+  const xAt = (i) => padL + gw * ((CH_N - n + i) / (CH_N - 1));
+  const yAt = (v) => padT + gh * (1 - clamp(v / chart.max, 0, 1.05));
+  const col = E.ion ? '#ab8cff' : '#c8ff3c';
+  const grd = ctx.createLinearGradient(0, padT, 0, padT + gh);
+  grd.addColorStop(0, E.ion ? 'rgba(171,140,255,0.28)' : 'rgba(200,255,60,0.28)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.moveTo(xAt(0), padT + gh);
+  for (let i = 0; i < n; i++) ctx.lineTo(xAt(i), yAt(chart.data[i]));
+  ctx.lineTo(xAt(n - 1), padT + gh); ctx.closePath(); ctx.fillStyle = grd; ctx.fill();
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) { const x = xAt(i), y = yAt(chart.data[i]); if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+  ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.lineJoin = 'round'; ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.stroke(); ctx.shadowBlur = 0;
+  const lx = xAt(n - 1), ly = yAt(chart.data[n - 1]);
+  ctx.beginPath(); ctx.arc(lx, ly, 3.2, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill();
+}
+
+/* =========================================================
+   Scan-Ring beim Wechsel
+   ========================================================= */
+const scanRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.012, 8, 128), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.78, 1, 0.24).multiplyScalar(3), transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending }));
+scanRing.rotation.y = Math.PI / 2; scanRing.visible = false; scene.add(scanRing);
+const scanState = { t: 0, on: false };
+function updateScan(dt) {
+  if (!scanState.on) { scanRing.visible = false; return; }
+  scanState.t += dt / 1.6;
+  const u = scanState.t;
+  if (u >= 1) { scanState.on = false; scanRing.visible = false; return; }
+  const x = lerp(vis.injX - 0.3, geom.exitX + 0.25, Ease.inOut3(u));
+  const r = radiusAtX(clamp(x, vis.injX, geom.exitX)) + 0.08;
+  scanRing.position.set(x, 0, 0); scanRing.scale.set(r, r, 1);
+  scanRing.material.opacity = Math.sin(u * Math.PI);
+}
+
+/* =========================================================
+   Größe / Render-Loop
+   ========================================================= */
+function resize() {
+  const w = Math.max(1, stage.clientWidth), h = Math.max(1, stage.clientHeight);
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(w, h, false);
+  composer.setPixelRatio(dpr);
+  composer.setSize(w, h);
+  bloom.resolution.set(w, h);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  const px = (h * dpr) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  pMat.uniforms.uPx.value = px; vMat.uniforms.uPx.value = px; dustMat.uniforms.uPx.value = px;
+  placePill();
+}
+new ResizeObserver(resize).observe(stage);
+window.addEventListener('resize', placePill);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(placePill);
+
+let raf = 0, last = performance.now(), clock = 0, uiTick = 0, chartTick = 0;
+let perfAcc = 0, perfN = 0;
+function frame(now) {
+  raf = requestAnimationFrame(frame);
+  const rawDt = (now - last) / 1000; last = now;
+  const dt = Math.min(0.05, Math.max(0, rawDt));
+  clock += dt;
+  // adaptive Auflösung
+  perfAcc += rawDt; perfN++;
+  if (perfN >= 45) {
+    const avg = perfAcc / perfN; perfAcc = 0; perfN = 0;
+    if (avg > 0.028 && dpr > 1) { dpr = Math.max(1, dpr - 0.25); resize(); }
+    else if (avg < 0.0175 && dpr < DPR_MAX) { dpr = Math.min(DPR_MAX, dpr + 0.25); resize(); }
+  }
+  updateTweens(dt);
+  if (profDirty) { updateLathe(); profDirty = false; }
+  stand.position.x = vis.injX - 0.26;
+  loadCellAnchor.set(stand.position.x - 0.05, 0.1, 1.0);
+  simUpdate(dt);
+  updateCamera(dt, clock);
+  updatePlume(dt, clock);
+  const flow = live.thrEff > 0.002 ? (0.35 + 0.65 * live.thrEff) : 0;
+  updateParticles(dt, flow, 0.4 + 0.6 * Math.max(live.thrEff, sim.state === 'chill' ? 0.3 : 0));
+  updateVapor(dt);
+  updateScan(dt);
+  for (const p of parts) if (p.obj.visible && p.obj.userData.spin) p.obj.userData.spin.rotation.x += dt * (2 + 60 * live.thrEff);
+  updateLabels(dt);
+  updateSteps(dt);
+  uiTick -= dt;
+  if (uiTick <= 0) { uiTick = 0.08; updateReadouts(); updateExplain(); updateFormulas(); }
+  chartTick += dt;
+  while (chartTick >= 1 / 30) { chartTick -= 1 / 30; chart.data.push(live.F); if (chart.data.length > CH_N) chart.data.shift(); }
+  drawChart();
+  composer.render(dt);
+}
+function start() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }
+function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; } }
+document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); else start(); });
+
+/* Init */
+document.body.dataset.level = String(ui.level);
+el.levels.querySelectorAll('button').forEach((b) => { b.tabIndex = +b.dataset.level === ui.level ? 0 : -1; });
+syncControls();
+applyLevelUI();
+syncParts();
+buildLabels();
+renderInfo(false);
+renderSteps();
+updateIgnite();
+resize();
+start();
+</script>
+</body>
+</html>

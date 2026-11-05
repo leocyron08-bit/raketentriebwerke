@@ -1,0 +1,10 @@
+{
+  "title": "Explosionszeichnung – 4 Feinschliffe",
+  "round": 2,
+  "variants": [
+    { "id": "D1", "name": "Bauteil-Index", "file": "variant-d1.html", "idea": "Keine schwebenden Labels: feste nummerierte Teileliste an der Seite, Linie erscheint nur beim Hover; Modell fährt zur Seite, wenn das Erklärpanel aufgeht." },
+    { "id": "D2", "name": "Geführte Keynote", "file": "variant-d2.html", "idea": "Präsentationsfluss Kapitel für Kapitel: immer nur ein Bauteil/eine Phase im Fokus, Kamera fährt hin, große Bildunterschrift blendet ein/aus." },
+    { "id": "D3", "name": "Hotspots", "file": "variant-d3.html", "idea": "Minimal: nur pulsierende Nummernpunkte am Modell, Karten gleiten seitlich herein; Funktion als Zeitleiste mit Phasenmarken." },
+    { "id": "D4", "name": "Split-Screen", "file": "variant-d4.html", "idea": "Zwei Spalten: links Bühne, rechts Erklärspalte; Scrollen durch die Phasen steuert Zerlegen und Funktion synchron." }
+  ]
+}

@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Antriebsvergleich – Mission wählt</title>
+<meta name="description" content="Erst die Mission, dann das Triebwerk: 13 Raketenantriebe sortieren sich nach Eignung für Start, Oberstufe, Raumsonde, Lageregelung und Marsreise.">
+<meta name="theme-color" content="#eef0f3">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* Tokens 1:1 aus dem Endprodukt (E2) */
+:root{
+  --bg:#eef0f3; --ink:#0c0e13; --ink2:#3a3f4a; --mute:#737a87; --line:rgba(12,14,19,.09); --line2:rgba(12,14,19,.14);
+  --card:#ffffff; --accent:#0a66ff; --fuel:#ff7a1a; --lox:#12b5e5; --ion:#7c5cff;
+  --hot1:#ffb054; --hot2:#ff5a1f;
+  --shadow:0 24px 48px -30px rgba(20,24,40,.34), 0 2px 8px rgba(20,24,40,.05);
+  --shadow-s:0 8px 20px -12px rgba(20,24,40,.30), 0 1px 3px rgba(20,24,40,.06);
+  --ease:cubic-bezier(.2,.8,.2,1); --ease-io:cubic-bezier(.65,.05,.36,1); --ease-spr:cubic-bezier(.3,.05,.12,1);
+  --d-s:.25s; --d-m:.5s; --d-l:.9s;
+  --r-xl:28px; --r-md:16px; --r-sm:12px;
+  /* Familienfarben (Kategorial, validiert: Nachbarpaare CVD-ΔE ≥ 17; Identität immer zusätzlich als Text) */
+  --fam-fluessig:#2a78d6; --fam-fest:#eb6834; --fam-elektrisch:#6250d6; --fam-nuklear:#008300; --fam-sonder:#e87ba4;
+  --bar-on:#0c0e13; --bar-off:#c9cdd4; --track:#eceef1;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1200px;margin:0 auto;padding:56px 32px 80px}
+
+/* Badge */
+.badge{position:fixed;top:14px;right:14px;z-index:20;display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;
+  font:600 11px/1 Sora,sans-serif;letter-spacing:.04em;color:var(--ink);background:rgba(255,255,255,.72);border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--shadow-s);white-space:nowrap}
+.badge i{width:9px;height:9px;border-radius:50%;background:conic-gradient(var(--fuel),#ff9a3c,var(--lox),var(--ion),var(--fuel))}
+.badge span{color:var(--mute);font-weight:400}
+
+/* Kopf */
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:28px}
+.eyebrow{font:600 12px/1 Sora,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:0 0 14px}
+h1{font:700 clamp(30px,4.4vw,52px)/1.04 Sora,sans-serif;letter-spacing:-.035em;margin:0;max-width:16ch}
+h1 em{font-style:normal;color:var(--mute)}
+.lead{font-size:16.5px;line-height:1.55;color:var(--ink2);max-width:58ch;margin:16px 0 0}
+
+/* Verständnisstufe – Segmentschalter mit gleitender Marke */
+.seg{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:4px;border-radius:999px;background:rgba(255,255,255,.66);border:1px solid var(--line);box-shadow:var(--shadow-s)}
+.seg button{position:relative;z-index:1;appearance:none;border:0;background:none;cursor:pointer;height:38px;padding:0 16px;border-radius:999px;font:600 13px/1 Sora,sans-serif;letter-spacing:-.01em;color:var(--mute);transition:color .35s var(--ease)}
+.seg button[aria-checked="true"]{color:#fff}
+.seg .knob{position:absolute;top:4px;bottom:4px;left:4px;border-radius:999px;background:var(--ink);transition:transform .55s var(--ease-spr),width .55s var(--ease-spr)}
+.seg-l{font:500 12px/1 Manrope,sans-serif;color:var(--mute);margin:0 0 8px;text-align:right}
+
+/* Missionen */
+.missions{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:0 0 16px;padding:0;list-style:none}
+.mt{appearance:none;width:100%;height:100%;text-align:left;cursor:pointer;border:1px solid var(--line);border-radius:var(--r-md);background:rgba(255,255,255,.5);padding:12px 14px 14px;
+  display:flex;flex-direction:column;gap:10px;transition:background .45s var(--ease),box-shadow .45s var(--ease),border-color .45s var(--ease),transform .45s var(--ease-spr)}
+.mt:hover{background:rgba(255,255,255,.82)}
+.mt:active{transform:scale(.98)}
+.mt[aria-checked="true"]{background:var(--card);border-color:transparent;box-shadow:0 0 0 2px var(--ink),var(--shadow)}
+.mt svg{width:100%;height:auto;aspect-ratio:120/64;display:block;border-radius:10px;background:linear-gradient(180deg,#f6f7f9,#eceef2)}
+.mt[aria-checked="true"] svg{background:linear-gradient(180deg,#f3f6fb,#e6ebf3)}
+.mt b{display:block;font:600 14.5px/1.2 Sora,sans-serif;letter-spacing:-.015em}
+.mt small{display:block;font:500 12px/1.3 Manrope,sans-serif;color:var(--mute);margin-top:4px}
+/* Illustrationen: Linien in Tinte, Akzente aus der Farbsprache */
+.il{fill:none;stroke:var(--ink2);stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.il-f{fill:var(--ink2);stroke:none}
+.il-m{stroke:var(--mute);stroke-width:1}
+.fl{transform-box:fill-box;transform-origin:50% 0}
+.mt[aria-checked="true"] .fl{animation:flick .18s ease-in-out infinite alternate}
+.mt[aria-checked="true"] .lift{animation:lift 2.6s var(--ease-io) infinite alternate}
+.mt[aria-checked="true"] .dash{animation:dash 2.4s linear infinite}
+.mt[aria-checked="true"] .rot{animation:rot 3.2s var(--ease-io) infinite alternate}
+.mt[aria-checked="true"] .k1{animation:kn 2.8s var(--ease-io) infinite alternate}
+.mt[aria-checked="true"] .k2{animation:kn 2.2s var(--ease-io) infinite alternate-reverse}
+.rot,.k1,.k2{transform-box:fill-box;transform-origin:50% 50%}
+@keyframes flick{to{transform:scaleY(.72)}}
+@keyframes lift{to{transform:translateY(-4px)}}
+@keyframes dash{to{stroke-dashoffset:-24}}
+@keyframes rot{from{transform:rotate(-9deg)}to{transform:rotate(9deg)}}
+@keyframes kn{to{transform:translateX(14px)}}
+
+/* Missions-Panel */
+.panel{background:var(--card);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:24px 28px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;margin-bottom:36px}
+.panel h2{font:600 20px/1.2 Sora,sans-serif;letter-spacing:-.02em;margin:0 0 10px}
+.panel p{margin:0;font-size:15px;line-height:1.6;color:var(--ink2)}
+.rule{display:flex;gap:10px;align-items:flex-start;margin-top:14px !important;font-size:13.5px !important;color:var(--mute) !important}
+.rule svg{flex:none;width:16px;height:16px;margin-top:2px}
+.w-h{font:600 11px/1 Sora,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:2px 0 12px;display:flex;justify-content:space-between;gap:10px}
+.wl{display:grid;gap:8px}
+.wr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;font-size:14px;min-height:28px}
+.wr .n{display:flex;align-items:center;gap:6px;color:var(--ink)}
+.wr .n em{font-style:normal;font-size:12px;color:var(--mute)}
+.wr.z .n{color:var(--mute)}
+.pips{display:inline-flex;gap:4px}
+.pips i{width:22px;height:8px;border-radius:2px;background:var(--track);transition:background .4s var(--ease)}
+.pips i.on{background:var(--ink)}
+.wr input[type=range]{width:132px;accent-color:var(--ink);margin:0}
+.dir{display:inline-flex;gap:2px;padding:2px;border-radius:999px;background:var(--track);margin-left:6px}
+.dir button{appearance:none;border:0;background:none;cursor:pointer;height:24px;padding:0 9px;border-radius:999px;font:600 11px/1 Sora,sans-serif;color:var(--mute)}
+.dir button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:var(--shadow-s)}
+.tune{appearance:none;cursor:pointer;margin-top:16px;display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);background:none;font:600 13px/1 Sora,sans-serif}
+.tune:hover{background:rgba(12,14,19,.04)}
+.fade-in{animation:fin .5s var(--ease) both}
+@keyframes fin{from{opacity:0;transform:translateY(6px)}}
+
+/* Legende zum Profil */
+.key{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;font-size:12.5px;color:var(--mute);margin:0 0 18px}
+.key span{display:inline-flex;align-items:center;gap:8px}
+.key i{width:22px;height:6px;border-radius:0 3px 3px 0}
+.key .fams i{width:9px;height:9px;border-radius:50%}
+
+/* Karten-Raster (eine Fläche, Gruppen-Köpfe als Vollbreite) */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(262px,1fr));gap:14px;align-items:start;overflow-anchor:none}
+.gh{grid-column:1/-1;display:flex;align-items:baseline;gap:12px;padding:22px 2px 2px;border-top:1px solid var(--line2);margin-top:10px}
+.gh:first-child{border-top:0;margin-top:0;padding-top:0}
+.gh .gi{align-self:center}
+.gh b{font:600 19px/1.2 Sora,sans-serif;letter-spacing:-.02em}
+.gh .c{font:600 13px/1 Sora,sans-serif;color:var(--mute);font-variant-numeric:tabular-nums}
+.gh p{margin:0 0 0 auto;font-size:13px;color:var(--mute);text-align:right}
+.gh .none{font-size:13px;color:var(--mute)}
+.gi{width:20px;height:20px;flex:none;border-radius:50%;display:inline-grid;place-items:center}
+.gi svg{width:12px;height:12px}
+.gi.ideal{background:var(--ink);color:#fff}
+.gi.ok{box-shadow:inset 0 0 0 1.5px var(--ink);color:var(--ink)}
+.gi.no{background:var(--track);color:var(--mute)}
+
+.card{position:relative;cursor:pointer;will-change:transform}
+.card.mv{z-index:2}
+.ci{background:var(--card);border-radius:var(--r-md);box-shadow:var(--shadow-s);padding:16px 16px 12px;transform-origin:50% 0;
+  transition:transform .6s var(--ease-spr),opacity .5s var(--ease),box-shadow .45s var(--ease),background .5s var(--ease)}
+.card:hover .ci{box-shadow:var(--shadow)}
+.card.no .ci{transform:scale(.955);opacity:.6;background:#f7f8fa;box-shadow:0 0 0 1px var(--line)}
+.card.no:hover .ci{opacity:.9}
+.card.open .ci{transform:none;opacity:1;background:var(--card);box-shadow:0 0 0 2px var(--ink),var(--shadow)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.fam{display:inline-flex;align-items:center;gap:7px;font:600 11.5px/1 Manrope,sans-serif;color:var(--ink2)}
+.fam i{width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 0 2px #fff}
+.mat{font:600 10.5px/1 Sora,sans-serif;letter-spacing:.03em;padding:5px 8px;border-radius:999px;background:var(--track);color:var(--ink2);white-space:nowrap}
+.mat.test{background:none;box-shadow:inset 0 0 0 1px var(--line2);color:var(--mute)}
+.nm{font:600 17px/1.2 Sora,sans-serif;letter-spacing:-.02em;margin:0}
+.ty{font-size:12.5px;color:var(--mute);margin:3px 0 14px}
+
+.pr{display:grid;gap:5px;margin-bottom:14px}
+.pr-row{display:grid;grid-template-columns:92px minmax(0,1fr) 50px;align-items:center;gap:8px;min-height:16px;font-size:11.5px;color:var(--mute);border-radius:4px}
+.pr-row .pl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color .4s var(--ease)}
+.pr-row.w .pl{color:var(--ink);font-weight:700}
+.tr{position:relative;height:6px;background:var(--track);border-radius:0 3px 3px 0}
+.tr b{position:absolute;left:0;top:0;bottom:0;border-radius:0 3px 3px 0;background:var(--bar-off);transition:background .45s var(--ease)}
+.pr-row.w .tr b{background:var(--bar-on)}
+.tr s{position:absolute;top:-2px;bottom:-2px;width:1px;background:rgba(12,14,19,.22);display:none}
+.lvl-x .tr s{display:block}
+.pr-row .pv{font-size:11px;text-align:right;white-space:nowrap}
+.lvl-e .pr-row:not(.e){display:none}
+.pr-row:hover .tr{background:#e2e5e9}
+
+.ks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;margin-bottom:12px}
+.k{min-width:0}
+.k span{display:block;font-size:11px;color:var(--mute);margin-bottom:3px}
+.k b{display:block;font:600 14px/1.25 Sora,sans-serif;letter-spacing:-.01em}
+.k b small{font:500 10.5px/1 Manrope,sans-serif;color:var(--mute);margin-left:3px}
+
+.why{display:flex;gap:9px;align-items:flex-start;margin:0;padding-top:11px;border-top:1px solid var(--line);font-size:13px;line-height:1.45;color:var(--ink2);min-height:68px}
+.why .gi{margin-top:0}
+.why .wt.swap{animation:swap .45s var(--ease)}
+@keyframes swap{from{opacity:0}}
+.more{appearance:none;border:0;background:none;cursor:pointer;display:flex;align-items:center;gap:6px;margin:8px -6px 0;padding:6px;border-radius:8px;font:600 12.5px/1 Sora,sans-serif;color:var(--ink2)}
+.more svg{width:12px;height:12px;transition:transform .5s var(--ease-spr)}
+.card.open .more svg{transform:rotate(180deg)}
+.det{display:grid;grid-template-rows:0fr;transition:grid-template-rows .6s var(--ease-spr)}
+.card.open .det{grid-template-rows:1fr}
+.det>div{overflow:hidden;min-height:0}
+.di{padding:12px 0 6px;opacity:0;transform:translateY(-4px);transition:opacity .35s var(--ease),transform .5s var(--ease)}
+.card.open .di{opacity:1;transform:none;transition-delay:.12s}
+.dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 12px;margin:0 0 12px;font-size:13px;line-height:1.45}
+.dl dt{color:var(--mute)}
+.dl dd{margin:0;color:var(--ink)}
+.pc{display:grid;gap:10px;margin-bottom:14px}
+.pc h4{font:600 11px/1 Sora,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 6px}
+.pc ul{margin:0;padding:0;list-style:none;display:grid;gap:5px}
+.pc li{position:relative;padding-left:16px;font-size:13px;line-height:1.45;color:var(--ink2)}
+.pc li::before{content:"";position:absolute;left:2px;top:7px;width:7px;height:2px;border-radius:1px;background:var(--ink2)}
+.pc .plus li::after{content:"";position:absolute;left:4.5px;top:4.5px;width:2px;height:7px;border-radius:1px;background:var(--ink2)}
+.go3d{appearance:none;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:10px;height:40px;padding:0 16px 0 12px;border-radius:999px;background:var(--ink);color:#fff;font:600 13px/1 Sora,sans-serif}
+.go3d i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--hot1),var(--hot2))}
+.go3d svg{width:11px;height:11px}
+
+/* Tooltip */
+.tip{position:fixed;left:0;top:0;z-index:30;pointer-events:none;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.96);border:1px solid var(--line);box-shadow:var(--shadow);
+  font-size:12px;line-height:1.35;color:var(--mute);max-width:240px;opacity:0;transition:opacity .2s var(--ease)}
+.tip.on{opacity:1}
+.tip b{display:block;font:600 13.5px/1.3 Sora,sans-serif;color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:22px;z-index:30;transform:translate(-50%,20px);opacity:0;pointer-events:none;max-width:calc(100% - 32px);
+  padding:12px 16px;border-radius:14px;background:rgba(22,25,33,.9);color:#eef1f6;font-size:13px;line-height:1.4;box-shadow:var(--shadow);transition:opacity .35s var(--ease),transform .5s var(--ease-spr)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--hot1)}
+
+/* Tabelle (Fallback) */
+.tbl{margin-top:44px;background:var(--card);border-radius:var(--r-xl);box-shadow:var(--shadow-s)}
+.tbl summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;font:600 15px/1.2 Sora,sans-serif}
+.tbl summary::-webkit-details-marker{display:none}
+.tbl summary span{font:500 13px/1.3 Manrope,sans-serif;color:var(--mute)}
+.tbl summary svg{width:14px;height:14px;flex:none;transition:transform .45s var(--ease-spr)}
+.tbl[open] summary svg{transform:rotate(180deg)}
+.tw{overflow-x:auto;padding:0 24px 22px;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;min-width:1080px;font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 11px/1.3 Sora,sans-serif;color:var(--mute);letter-spacing:.02em;white-space:nowrap}
+td.n{text-align:right;white-space:nowrap}
+td.na{color:var(--mute)}
+tbody tr:hover{background:#f7f8fa}
+.src{font-size:12px;color:var(--mute);margin:16px 4px 0}
+
+/* Responsiv */
+@media (max-width:1080px){
+  .missions{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .wrap{padding:64px 16px 64px}
+  .head{align-items:flex-start}
+  .seg-l{text-align:left}
+  .missions{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:16px;margin:0 -16px 14px;padding:4px 16px 10px;scrollbar-width:none;gap:10px}
+  .missions::-webkit-scrollbar{display:none}
+  .missions li{flex:0 0 152px;scroll-snap-align:start}
+  .panel{grid-template-columns:1fr;padding:20px;gap:20px;border-radius:22px}
+  .gh{flex-wrap:wrap}
+  .gh p{margin:0;flex-basis:100%;text-align:left}
+  .tw{padding:0 12px 16px}
+  .tbl summary{padding:16px}
+}
+@media (max-width:420px){
+  .seg button{padding:0 11px;font-size:12.5px}
+  .badge span{display:none}
+  .wr input[type=range]{width:104px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition-duration:.01s !important;transition-delay:0s !important}
+}
+</style>
+</head>
+<body class="lvl-f">
+<div class="badge" aria-label="Variante V3, Mission wählt"><i></i>Variante V3<span>&nbsp;· Mission wählt</span></div>
+
+<main class="wrap">
+  <header class="head">
+    <div>
+      <p class="eyebrow">Antriebsvergleich</p>
+      <h1>Es gibt kein bestes Triebwerk. <em>Nur das passende.</em></h1>
+      <p class="lead" id="lead"></p>
+    </div>
+    <div>
+      <p class="seg-l">Verständnisstufe</p>
+      <div class="seg" role="radiogroup" aria-label="Verständnisstufe" id="seg">
+        <span class="knob" aria-hidden="true"></span>
+        <button role="radio" data-l="e" aria-checked="false">Einsteiger</button>
+        <button role="radio" data-l="f" aria-checked="true">Fortgeschritten</button>
+        <button role="radio" data-l="x" aria-checked="false">Experte</button>
+      </div>
+    </div>
+  </header>
+
+  <ul class="missions" role="radiogroup" aria-label="Mission wählen" id="missions"></ul>
+
+  <section class="panel" id="panel" aria-live="polite"></section>
+
+  <div class="key" id="key"></div>
+  <div class="grid" id="grid"></div>
+
+  <details class="tbl" id="tbl">
+    <summary><div>Alle 13 als Tabelle <span id="tblSub">– alle Zahlen auf einen Blick</span></div>
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5l4 4 4-4"/></svg></summary>
+    <div class="tw"><table id="table"></table></div>
+  </details>
+  <p class="src">Alle Werte gerundete Richtwerte (ca.) aus dem Inhalts-Brief; „k. A.“ = im Datensatz nicht belegt. Einordnung qualitativ aus Daten und Einsatzgebiet – keine Rangliste auf Kommastellen.</p>
+</main>
+
+<div class="tip" id="tip" role="tooltip"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= Daten (nur aus docs/inhalt-triebwerke.md, „Vergleichsdaten“ + Typ-Abschnitte) ================= */
+const FAM = {
+  'fest':       { n:'Feststoff',  c:'var(--fam-fest)' },
+  'flüssig':    { n:'Flüssig',    c:'var(--fam-fluessig)' },
+  'elektrisch': { n:'Elektrisch', c:'var(--fam-elektrisch)' },
+  'nuklear':    { n:'Nuklear',    c:'var(--fam-nuklear)' },
+  'Sonderform': { n:'Sonderform', c:'var(--fam-sonder)' }
+};
+// t = Schub [kN], i = Isp [s]; Zahl, [von,bis] oder null (= „–“ im Brief)
+const D = [
+ { id:'srb', name:'Space-Shuttle-SRB', typ:'Feststoff', fam:'fest', fuel:'APCP (AP + Al + HTPB)', fe:'fester Treibsatz (Alu-Pulver + Oxidator)',
+   tSL:[12000,14700], tV:null, iSL:242, iV:268, pc:62, m:null, re:'nein', thr:'nein', use:'Booster', mat:'geflogen', note:'Schubverlauf über Kanalgeometrie; 1981–2011',
+   store:[1,'einfach, lagerfähig'],
+   pro:['Enormer Schub (ca. 12 MN beim Abheben, kurz danach bis ca. 14,7 MN)','Einfach und lagerfähig'],
+   con:['Einmal gezündet nicht abschaltbar, kaum regelbar','Isp nur ca. 242 s (Meereshöhe) / 268 s (Vakuum)'] },
+ { id:'merlin-1d', name:'Merlin 1D', typ:'Gasgenerator', fam:'flüssig', fuel:'RP-1 / LOX', fe:'Kerosin + flüssiger Sauerstoff',
+   tSL:845, tV:914, iSL:282, iV:311, pc:100, m:470, re:'ja', thr:'ja', use:'Erststufe', mat:'fliegt', note:'regelbar bis ca. 40 %',
+   store:[0,'kryogen (LOX)'],
+   pro:['An- und abschaltbar, regelbar bis ca. 40 %','Sehr leicht: Schub/Gewicht ca. 180'],
+   con:['Offener Zyklus: Gasgenerator-Abgas geht ungenutzt über Bord → Isp-Verlust','Flüssiger Sauerstoff ist kryogen'] },
+ { id:'raptor-2', name:'Raptor 2', typ:'Stufenverbrennung Full-Flow', fam:'flüssig', fuel:'CH4 / LOX', fe:'Methan + flüssiger Sauerstoff',
+   tSL:2260, tV:null, iSL:327, iV:350, pc:300, m:1630, re:'ja', thr:'ja', use:'Erststufe, Oberstufe', mat:'fliegt', note:'Starship-Testflüge; Vakuumvariante Isp ca. 380 s',
+   store:[0,'kryogen (CH₄/LOX)'],
+   pro:['Nichts wird verschwendet: auch das Turbinengas schiebt mit','Höchster Kammerdruck im Vergleich (ca. 300 bar)','Regelbar ca. 40–100 %'],
+   con:['Technisch deutlich schwieriger als ein Gasgenerator','Sauerstoffreiches Heißgas greift Metalle an → Spezialleg­ierungen'] },
+ { id:'rs-25', name:'RS-25', typ:'Stufenverbrennung brennstoffreich', fam:'flüssig', fuel:'LH2 / LOX', fe:'flüssiger Wasserstoff + Sauerstoff',
+   tSL:1860, tV:2280, iSL:366, iV:452, pc:206, m:3180, re:'nein', thr:'ja', use:'Erststufe', mat:'fliegt', note:'109 % Leistungsstufe; regelbar 67–109 %',
+   store:[0,'kryogen (LH₂/LOX)'],
+   pro:['Höchster Isp auf Meereshöhe im Vergleich (ca. 366 s)','Regelbar ca. 67–109 %'],
+   con:['Im Datensatz nicht wiederzündbar','Schwer (ca. 3,2 t), tiefkalte Treibstoffe'] },
+ { id:'nstar', name:'NSTAR (Dawn)', typ:'Ionentriebwerk', fam:'elektrisch', fuel:'Xenon', fe:'Edelgas Xenon + Strom',
+   tSL:null, tV:0.000092, iSL:null, iV:3100, pc:null, m:null, re:'ja', thr:'ja', use:'Raumsonde', mat:'geflogen', note:'92 mN bei ca. 2.3 kW',
+   store:[null,'keine Angabe'],
+   pro:['Isp ca. 3100 s – höchster Wert im Vergleich','Läuft monatelang: Dawn sammelte über ca. 11 Jahre ca. 11 km/s Δv'],
+   con:['Schub nur ca. 92 mN – „Gewicht eines Blatt Papiers“','Braucht ca. 2,3 kW Strom, funktioniert nur im Vakuum'] },
+ { id:'rl10b-2', name:'RL10B-2', typ:'Expander', fam:'flüssig', fuel:'LH2 / LOX', fe:'flüssiger Wasserstoff + Sauerstoff',
+   tSL:null, tV:110, iSL:null, iV:465, pc:44, m:300, re:'ja', thr:'nein', use:'Oberstufe', mat:'fliegt', note:'RL10C-1: ca. 102 kN / 450 s; Serien-RL10 nicht regelbar',
+   store:[0,'kryogen (LH₂/LOX)'],
+   pro:['Isp ca. 465 s – Spitze der chemischen Triebwerke','Sehr zuverlässig, mehrfach zündbar'],
+   con:['Würfel-Quadrat-Problem deckelt Schub und Kammerdruck','Reines Vakuumtriebwerk; Serien-RL10 nicht regelbar'] },
+ { id:'aj10-137', name:'AJ10-137 (Apollo SPS)', typ:'Druckgefördert, hypergol', fam:'flüssig', fuel:'Aerozine 50 / N2O4', fe:'zwei Flüssigkeiten, die sich selbst entzünden',
+   tSL:null, tV:91, iSL:null, iV:314, pc:7, m:null, re:'ja', thr:'nein', use:'Raumschiff-Hauptantrieb', mat:'geflogen', note:'Draco: ca. 0.4 kN / ca. 300 s (MMH / N2O4), fliegt',
+   store:[1,'lagerfähig (nicht kryogen)'],
+   pro:['Keine Pumpen, keine Zündkerze: zündet selbst, beliebig oft','Bei Raumtemperatur lagerfähig – keine Verdampfungsverluste'],
+   con:['Tanks müssen den Förderdruck halten → schwer, Kammerdruck niedrig (ca. 7 bar)','Treibstoffe hochgiftig'] },
+ { id:'rd-180', name:'RD-180', typ:'Stufenverbrennung oxidatorreich', fam:'flüssig', fuel:'RP-1 / LOX', fe:'Kerosin + flüssiger Sauerstoff',
+   tSL:3830, tV:4150, iSL:311, iV:338, pc:267, m:5480, re:'nein', thr:'ja', use:'Erststufe', mat:'fliegt', note:'Atlas V, auslaufend; regelbar 47–100 %',
+   store:[0,'kryogen (LOX)'],
+   pro:['Stärkstes Flüssigtriebwerk im Vergleich (ca. 3830 kN)','Gleiche Treibstoffe wie Merlin, aber Isp ca. 311/338 s statt 282/311 s'],
+   con:['Gefahr von Metallbränden im Sauerstoff-Heißgas','Im Datensatz nicht wiederzündbar; auslaufend'] },
+ { id:'ss1-hybrid', name:'SpaceShipOne-Motor', typ:'Hybrid', fam:'Sonderform', fuel:'HTPB / N2O', fe:'Gummiblock + Lachgas',
+   tSL:null, tV:[74,88], iSL:null, iV:250, pc:null, m:null, re:'nein', thr:'nein', use:'Suborbital', mat:'geflogen', note:'Schub/Isp ohne Bezugsdruck angegeben; 2004',
+   store:[0.5,'einfacher als flüssig'],
+   pro:['Sicher: Brennstoff und Oxidator getrennt, Block nicht explosiv','Abschaltbar; einfacher als ein Flüssigtriebwerk'],
+   con:['Isp ca. 250 s – zwischen Feststoff und Flüssig','Mischungsverhältnis verschiebt sich beim Brennen; dieser Motor nicht regelbar'] },
+ { id:'mr-103', name:'Hydrazin-Düse 1-N-Klasse (MR-103)', typ:'Monergol', fam:'flüssig', fuel:'Hydrazin (N2H4)', fe:'Hydrazin (ein einziger Treibstoff)',
+   tSL:null, tV:[0.0002,0.0011], iSL:null, iV:[200,225], pc:null, m:0.33, re:'ja', thr:'begrenzt', use:'Lageregelung', mat:'fliegt', note:'Schub sinkt mit Tankdruck (Blowdown)',
+   store:[1,'einfach: ein Treibstoff'],
+   pro:['Ventil schaltet in Millisekunden, kleinste Impulse ca. 0,01 N·s','Nur ein Treibstoff, zerfällt am Katalysator – ohne Feuer'],
+   con:['Hydrazin ist giftig','Katalysator verschleißt; Schub sinkt mit dem Tankdruck'] },
+ { id:'coldgas-n2', name:'Kaltgas-Düse Stickstoff (z.B. MMU)', typ:'Kaltgas', fam:'Sonderform', fuel:'Stickstoff (N2)', fe:'Druckgas Stickstoff',
+   tSL:null, tV:0.006, iSL:null, iV:73, pc:null, m:null, re:'ja', thr:'nein', use:'Lageregelung', mat:'fliegt', note:'Isp theoretisch ca. 80 s; MMU-Düse ca. 6 N',
+   store:[1,'sehr einfach'],
+   pro:['Keine Chemie, keine Hitze: sauber und sehr einfach','Manned Maneuvering Unit: 24 Düsen à ca. 6 N'],
+   con:['Wenig effizient: Isp ca. 73 s (niedrigster Wert im Vergleich)'] },
+ { id:'nerva-xe', name:'NERVA XE Prime', typ:'Nuklear-thermisch', fam:'nuklear', fuel:'LH2 (Reaktorheizung)', fe:'Wasserstoff, im Reaktor erhitzt',
+   tSL:null, tV:247, iSL:null, iV:825, pc:39, m:18100, re:'ja', thr:null, use:'Oberstufe, interplanetar (geplant)', mat:'nur Prüfstand', note:'28 Starts am Prüfstand; Flugtriebwerk-Auslegung 850 s',
+   store:[0,'kryogen (LH₂), aufwendig'],
+   pro:['Isp ca. 825 s – etwa doppelt so effizient wie die besten chemischen','Trotzdem nennenswerter Schub (ca. 247 kN)'],
+   con:['Sehr schwer: ca. 18 t, Schub/Gewicht nur ca. 1,4','Strahlung, aufwendige Tests; bisher nie geflogen'] },
+ { id:'xrs-2200', name:'XRS-2200 (X-33)', typ:'Aerospike-Düse (Gasgenerator)', fam:'Sonderform', fuel:'LH2 / LOX', fe:'flüssiger Wasserstoff + Sauerstoff',
+   tSL:909, tV:1184, iSL:339, iV:439, pc:58, m:null, re:null, thr:null, use:'Erststufe (geplant)', mat:'nur Prüfstand', note:'Düsenbauform, kein Zyklus',
+   store:[0,'kryogen, aufwendige Fertigung'],
+   pro:['Höhenkompensation: der Strahl passt sich beim Aufstieg selbst an','Linear: Lenkung über einzeln geregelte Brennkammern'],
+   con:['Große, zu kühlende Spike-Fläche, Masse, aufwendige Fertigung','Kaum Flugerfahrung – lief nur am Prüfstand'] }
+];
+
+/* ================= Kriterien & Normierung (gleiche Skala für alle Karten) ================= */
+const CRIT = [
+  { k:'thrust',   f:'Schub',         e:'Kraft',        x:'Schub (log)',   ein:true },
+  { k:'isp',      f:'Isp',           e:'Sparsamkeit',  x:'Isp (log)',     ein:true },
+  { k:'restart',  f:'Wiederzündbar', e:'Wieder an',    x:'Wiederzündbar', ein:true },
+  { k:'throttle', f:'Regelbar',      e:'Stellbar',     x:'Regelbar' },
+  { k:'store',    f:'Lagerfähig', e:'Einfach & lagerbar', x:'Lagerfähig' },
+  { k:'mature',   f:'Reifegrad',     e:'Erprobt',      x:'Reifegrad',     ein:true }
+];
+const rng = v => v == null ? null : (Array.isArray(v) ? v : [v, v]);
+const hi = v => v == null ? null : (Array.isArray(v) ? v[1] : v);
+const T_LO = -4.5, T_HI = 4.5;                                   // log10 kN: 0,03 mN … 32 MN
+const I_LO = Math.log10(50), I_HI = Math.log10(3500);            // log10 s
+const clamp01 = x => Math.max(0, Math.min(1, x));
+D.forEach(e => {
+  e.tMax = Math.max(hi(e.tSL) || 0, hi(e.tV) || 0);
+  e.iMax = hi(e.iV) != null ? hi(e.iV) : hi(e.iSL);
+  const yn = s => s === 'ja' ? 1 : s === 'nein' ? 0 : s === 'begrenzt' ? 0.5 : null;
+  e.v = {
+    thrust: clamp01((Math.log10(e.tMax) - T_LO) / (T_HI - T_LO)),
+    isp: clamp01((Math.log10(e.iMax) - I_LO) / (I_HI - I_LO)),
+    restart: yn(e.re), throttle: yn(e.thr), store: e.store[0],
+    mature: e.mat === 'nur Prüfstand' ? 0.35 : 1
+  };
+});
+
+/* ================= Missionen: Gewichte (0–3) + Einordnung mit Begründung ================= */
+const M = [
+ { id:'boden', t:'Vom Boden abheben', ke:'Start von der Erde', kf:'Erststufe · Booster',
+   w:{thrust:3,isp:1,restart:0,throttle:1,store:0,mature:2}, dir:'big',
+   why:{ e:'Beim Start muss das Triebwerk die ganze volle Rakete hochheben – also zählt vor allem Kraft. Sparsamkeit hilft, ist aber zweitrangig. Und es sollte sich schon oft bewährt haben.',
+         f:'Erststufen und Booster müssen mehr Schub liefern, als die volle Rakete wiegt – und zwar auf Meereshöhe. Der Isp auf Meereshöhe zählt weniger, Regelbarkeit hilft, Flugerprobung ist beim Start Pflicht.',
+         x:'Startbedingung F > m₀·g₀ (Schub/Gewicht > 1). Die Düse arbeitet gegen pₐ ≈ 1 bar → Isp auf Meereshöhe relevant; Vakuumdüsen mit großem ε wären stark überexpandiert und scheiden aus.' },
+   rule:{ e:'Raus fällt, wer zu schwach ist oder nur im Weltall funktioniert.', f:'Ausschluss: kein Betrieb auf Meereshöhe belegt oder Schub viel zu gering.' },
+   r:{
+    'srb':['ideal','Riesige Kraft – genau dafür gebaut, die Rakete vom Boden zu stemmen.','Booster mit dem größten Schub im Vergleich; einfach und lagerfähig. Dass er nicht abschaltbar ist, stört beim Start kaum.'],
+    'merlin-1d':['ideal','Stark und lässt sich stärker oder schwächer stellen – für die erste Stufe gebaut.','Erststufen-Triebwerk: regelbar bis ca. 40 % und sehr leicht (Schub/Gewicht ca. 180).'],
+    'raptor-2':['ideal','Sehr stark und dabei sparsam.','Höchster Kammerdruck im Vergleich (ca. 300 bar) → viel Schub bei gutem Isp auf Meereshöhe.'],
+    'rs-25':['ideal','Stark und besonders sparsam – braucht aber superkalten Wasserstoff.','Bester Isp auf Meereshöhe im Vergleich; Einsatz Erststufe, regelbar 67–109 %.'],
+    'rd-180':['ideal','Eines der stärksten Triebwerke hier.','Stärkstes Flüssigtriebwerk im Vergleich, regelbar 47–100 %.'],
+    'xrs-2200':['ok','Clevere Düse, die sich der Höhe anpasst – ist aber nie geflogen.','Höhenkompensation passt genau zum Aufstieg durch die Atmosphäre – aber nur am Prüfstand erprobt (X-33 2001 eingestellt).'],
+    'ss1-hybrid':['ok','Für kleine Raketen denkbar, für große zu schwach.','Im Datensatz nur suborbital belegt; Schub ohne Bezugsdruck – ein Bruchteil eines Merlin.'],
+    'rl10b-2':['no','Nur fürs Weltall gebaut.','Reines Vakuumtriebwerk mit riesiger Düse (ε ca. 280) – auf Meereshöhe nicht sinnvoll.'],
+    'aj10-137':['no','Nur fürs Weltall gebaut – und zu schwach.','Vakuumtriebwerk mit niedrigem Kammerdruck (ca. 7 bar) – für den Start viel zu wenig Schub.'],
+    'nerva-xe':['no','Viel zu schwer für seine Kraft.','Schub/Gewicht nur ca. 1,4 und nur für den Betrieb im All gedacht.'],
+    'nstar':['no','Schub so sanft wie ein Blatt Papier – viel zu gering zum Abheben.','Schub viel zu gering zum Abheben; funktioniert ohnehin nur im Vakuum.'],
+    'mr-103':['no','Winzige Puster – viel zu schwach zum Abheben.','Schub viel zu gering zum Abheben.'],
+    'coldgas-n2':['no','Eine Spraydose hebt keine Rakete.','Schub viel zu gering zum Abheben.']
+   }},
+ { id:'ober', t:'Im All weiterbeschleunigen', ke:'Obere Raketenstufe', kf:'Oberstufe',
+   w:{thrust:1,isp:3,restart:2,throttle:0,store:0,mature:2}, dir:'big',
+   why:{ e:'Oben im All ist die Rakete schon leichter und schnell. Jetzt zählt, wie sparsam das Triebwerk ist – und dass man es mehrmals anschalten kann.',
+         f:'Oberstufen arbeiten im Vakuum: Ein hoher Vakuum-Isp holt aus jedem Kilogramm Treibstoff mehr Δv. Wiederzündbarkeit erlaubt mehrere Brennphasen. Schub braucht es nur noch mäßig.',
+         x:'Δv = Isp·g₀·ln(m₀/m_f): Im Vakuum geht Isp direkt ins Δv. Da pₐ = 0, lohnen große Expansionsverhältnisse (RL10B-2: ε ca. 280) – Meereshöhen-Isp ist hier irrelevant.' },
+   rule:{ e:'Raus fällt, wer zu schwach ist oder sich nicht ausschalten lässt.', f:'Ausschluss: Schub zu gering für eine Raketenstufe, nicht abschaltbar oder nur suborbital.' },
+   r:{
+    'rl10b-2':['ideal','Super sparsam und mehrmals startbar – ein Klassiker für obere Stufen.','Oberstufen-Triebwerk: höchster chemischer Isp im Vergleich, mehrfach zündbar, sehr zuverlässig.'],
+    'raptor-2':['ideal','Kann auch oben arbeiten – mit einer Spezial-Düse fürs All.','Einsatz auch als Oberstufe; wiederzündbar, Vakuumvariante mit Isp ca. 380 s.'],
+    'aj10-137':['ideal','Startet immer wieder zuverlässig – trieb das Apollo-Raumschiff an.','Raumschiff-Hauptantrieb: hypergol, beliebig oft zündbar, lagerfähig.'],
+    'nerva-xe':['ok','Doppelt so sparsam – aber nie geflogen.','Als Oberstufe geplant, Isp ca. 825 s – aber nur Prüfstand und sehr schwer (ca. 18 t).'],
+    'merlin-1d':['ok','Kann wieder zünden, ist aber für unten gebaut.','Wiederzündbar, aber im Datensatz nur als Erststufe eingesetzt; Vakuum-Isp ca. 311 s.'],
+    'rs-25':['ok','Sehr sparsam, lässt sich aber nicht neu starten.','Hoher Vakuum-Isp, aber nicht wiederzündbar und schwer (ca. 3,2 t).'],
+    'rd-180':['ok','Stark, aber nicht neu startbar.','Nicht wiederzündbar; Vakuum-Isp deutlich unter den Wasserstoff-Triebwerken.'],
+    'xrs-2200':['ok','Die anpassbare Düse bringt im All nichts mehr.','Über der Auslegungshöhe verhält sich die Aerospike wie eine feste Düse; nur Prüfstand.'],
+    'srb':['no','Brennt einmal und lässt sich nicht ausschalten.','Booster: nicht abschaltbar, nicht wiederzündbar, Isp nur ca. 268 s.'],
+    'ss1-hybrid':['no','Nur für kurze Hüpfer ins All gebaut.','Suborbital, nicht wiederzündbar, Isp ca. 250 s.'],
+    'nstar':['no','Viel zu sanft, um eine schwere Raketenstufe anzuschieben.','Schub zu gering für eine Raketenstufe.'],
+    'mr-103':['no','Zu schwach – nur zum Drehen gedacht.','Schub zu gering für eine Raketenstufe.'],
+    'coldgas-n2':['no','Zu schwach – nur zum Drehen gedacht.','Schub zu gering, Isp nur ca. 73 s.']
+   }},
+ { id:'sonde', t:'Lange Reise zu Planeten', ke:'Jahrelang unterwegs', kf:'Raumsonde · Asteroiden',
+   w:{thrust:0,isp:3,restart:2,throttle:0,store:2,mature:1}, dir:'big',
+   why:{ e:'Eine Raumsonde fliegt viele Jahre. Wichtig: extrem sparsam, oft neu startbar und ein Treibstoff, der nicht verdampft. Kraft ist fast egal.',
+         f:'Auf langen Reisen zählt das gesamte Δv über Jahre: hoher Isp, Wiederzündbarkeit für Kurskorrekturen und lagerfähiger Treibstoff ohne Verdampfungsverluste. Der Schub darf klein sein.',
+         x:'Bei langer Brenndauer ist der Schub zweitrangig, Δv ∝ Isp. Dawn: ca. 11 km/s Δv über ca. 11 Jahre mit max. ca. 92 mN bei ca. 2,3 kW.' },
+   rule:{ e:'Raus fällt, wer sich nicht neu starten lässt oder viel zu groß ist.', f:'Ausschluss: nicht wiederzündbar, Isp sehr niedrig oder für eine Sonde viel zu groß.' },
+   r:{
+    'nstar':['ideal','Extrem sparsam und läuft monatelang – perfekt für weite Reisen.','Höchster Isp im Vergleich (ca. 3100 s); Einsatz Raumsonde – Dawn sammelte so ca. 11 km/s Δv.'],
+    'aj10-137':['ok','Treibstoff hält jahrelang und zündet immer – aber weniger sparsam.','Lagerfähig ohne Verdampfungsverluste, beliebig oft zündbar; Isp aber nur ca. 314 s.'],
+    'nerva-xe':['ok','Sehr sparsam, aber schwer und nie geflogen.','Für interplanetare Missionen geplant; ca. 18 t schwer, nur Prüfstand.'],
+    'rl10b-2':['ok','Sparsam, aber der eiskalte Wasserstoff verdampft mit der Zeit.','Hoher Isp und wiederzündbar – doch LH₂ ist kryogen, also nicht jahrelang lagerfähig.'],
+    'mr-103':['ok','Gut zum Lenken unterwegs, als Hauptantrieb zu schwach.','Für Satelliten und Raumsonden belegt (Lageregelung); als Hauptantrieb zu wenig Isp.'],
+    'coldgas-n2':['no','Viel zu wenig sparsam für eine lange Reise.','Isp nur ca. 73 s – niedrigster Wert im Vergleich.'],
+    'srb':['no','Brennt nur ein einziges Mal.','Nicht abschaltbar, nicht wiederzündbar – keine Kurskorrekturen möglich.'],
+    'merlin-1d':['no','Viel zu groß für eine Sonde.','Erststufen-Triebwerk; flüssiger Sauerstoff ist kryogen – ungeeignet für jahrelange Reisen.'],
+    'raptor-2':['no','Viel zu groß für eine Sonde.','ca. 1,6 t, kryogene Treibstoffe – für eine Raumsonde überdimensioniert.'],
+    'rs-25':['no','Lässt sich nicht neu starten.','Nicht wiederzündbar, kryogen (LH₂/LOX), ca. 3,2 t.'],
+    'rd-180':['no','Lässt sich nicht neu starten.','Nicht wiederzündbar, Erststufen-Triebwerk (ca. 5,5 t).'],
+    'ss1-hybrid':['no','Nur für kurze Hüpfer gebaut.','Suborbital, nicht wiederzündbar.'],
+    'xrs-2200':['no','Für den Start gedacht – und nie geflogen.','Der Düsenvorteil wirkt nur in der Atmosphäre; nur Prüfstand.']
+   }},
+ { id:'lage', t:'Satellit ausrichten', ke:'Kleine Drehungen', kf:'Lageregelung',
+   w:{thrust:2,isp:0,restart:3,throttle:0,store:2,mature:1}, dir:'small',
+   why:{ e:'Ein Satellit soll sich nur ein kleines Stück drehen. Dafür braucht man winzige, genaue Puster, die man sehr oft an- und ausschalten kann. Hier ist wenig Kraft ein Vorteil!',
+         f:'Lageregelung braucht kleine, präzise Impulse: wenig Schub ist hier gewollt, dazu schnelle, beliebig häufige Zündungen und einfache, lagerfähige Technik. Der Isp ist zweitrangig.',
+         x:'Entscheidend ist der kleinste Impulsbit (MR-103: ca. 0,01 N·s), nicht der Isp. Magnetventile schalten in Millisekunden; im Blowdown-Betrieb sinkt der Schub mit dem Tankdruck.' },
+   rule:{ e:'Raus fällt, wer viel zu kräftig ist oder sich nicht kurz an- und ausschalten lässt.', f:'Ausschluss: viel zu viel Schub für feine Drehungen oder keine kurzen Pulse möglich.' },
+   r:{
+    'mr-103':['ideal','Kleine, genaue Puster – genau dafür gemacht.','Magnetventil öffnet in Millisekunden, kleinste Impulse ca. 0,01 N·s; nur ein Treibstoff.'],
+    'coldgas-n2':['ideal','Ganz einfach wie eine Spraydose – sauber und sicher.','Keine Chemie, keine Hitze; Einsatz Lageregelung (z.B. MMU, CubeSats). Isp nur ca. 73 s.'],
+    'nstar':['ok','Sehr sanft und sparsam – braucht aber viel Strom.','Schub fein genug, im Datensatz aber als Hauptantrieb belegt; braucht ca. 2,3 kW.'],
+    'aj10-137':['no','Viel zu kräftig für feine Drehungen.','Viel zu viel Schub für Lageregelung – dafür gibt es kleine Verwandte wie Draco (ca. 0,4 kN).'],
+    'rl10b-2':['no','Viel zu kräftig für feine Drehungen.','Viel zu viel Schub und nicht regelbar – viel zu grob für Lageregelung.'],
+    'merlin-1d':['no','Viel zu kräftig – der Satellit würde davonschießen.','Hunderte kN – viel zu viel Schub für feine Drehungen.'],
+    'raptor-2':['no','Viel zu kräftig – der Satellit würde davonschießen.','Tausende kN – viel zu viel Schub für feine Drehungen.'],
+    'rs-25':['no','Viel zu kräftig und nicht neu startbar.','Viel zu viel Schub, nicht wiederzündbar.'],
+    'rd-180':['no','Viel zu kräftig und nicht neu startbar.','Viel zu viel Schub, nicht wiederzündbar.'],
+    'srb':['no','Lässt sich nicht ausschalten.','Nicht abschaltbar – keine kurzen Pulse möglich.'],
+    'ss1-hybrid':['no','Zu kräftig und nicht neu startbar.','Nicht wiederzündbar, viel zu viel Schub.'],
+    'nerva-xe':['no','Ein Atomreaktor zum Drehen? Viel zu groß.','ca. 18 t und viel zu viel Schub – völlig überdimensioniert.'],
+    'xrs-2200':['no','Viel zu kräftig.','Startantrieb mit viel zu viel Schub; nur Prüfstand.']
+   }},
+ { id:'mars', t:'Mars schneller erreichen', ke:'Zukunftsmission', kf:'Zukunft · interplanetar',
+   w:{thrust:2,isp:3,restart:1,throttle:0,store:0,mature:0}, dir:'big',
+   why:{ e:'Ein Zukunftstraum: Menschen schneller zum Mars bringen. Dafür braucht man ein Triebwerk, das sehr sparsam ist UND trotzdem kräftig schiebt. Ob es schon geflogen ist, zählt hier nicht.',
+         f:'Kurze Reisezeit heißt viel Δv in kurzer Zeit: hoher Isp und nennenswerter Schub zugleich. Genau diese Kombination fehlt chemischen (Isp-Grenze) und elektrischen (Schub-Grenze) Antrieben. Reifegrad zählt bewusst nicht.',
+         x:'vₑ ~ √(T/M): reines H₂ (M ≈ 2 g/mol) statt H₂O (18) oder CO₂ (44). NERVA: ca. 825 s bei ca. 247 kN; Chemie endet bei ca. 465 s (RL10B-2), Ionen liefern ca. 3100 s, aber nur ca. 92 mN.' },
+   rule:{ e:'Raus fällt, wer zu schwach, nicht neu startbar oder zu wenig sparsam ist.', f:'Ausschluss: nicht wiederzündbar, Schub viel zu gering oder Isp zu niedrig.' },
+   r:{
+    'nerva-xe':['ideal','Etwa doppelt so sparsam wie die besten Verbrennungs-Triebwerke – und trotzdem kräftig.','Als Oberstufe für interplanetare Flüge geplant: hoher Isp bei nennenswertem Schub – bisher nur Prüfstand.'],
+    'raptor-2':['ok','Kräftig und neu startbar – aber weniger sparsam.','Wiederzündbar, Vakuumvariante Isp ca. 380 s – chemisch gut, aber weit unter nuklear.'],
+    'rl10b-2':['ok','Sparsamstes Verbrennungs-Triebwerk hier, aber eher schwach.','Spitze der Chemie beim Isp, aber nur ca. 110 kN.'],
+    'aj10-137':['ok','Zuverlässig, aber nicht besonders sparsam.','Lagerfähig und beliebig oft zündbar; Isp aber nur ca. 314 s.'],
+    'nstar':['no','Super sparsam, aber viel zu sanft für eine schnelle Reise.','Δv sammelt sich über Jahre (Dawn: ca. 11 km/s in ca. 11 Jahren) – zu langsam für „schneller“.'],
+    'merlin-1d':['no','Nicht sparsam genug.','Vakuum-Isp ca. 311 s; im Datensatz nur als Erststufe.'],
+    'rs-25':['no','Lässt sich nicht neu starten.','Nicht wiederzündbar – kein Abbremsen oder Kurswechsel unterwegs.'],
+    'rd-180':['no','Lässt sich nicht neu starten.','Nicht wiederzündbar, Erststufen-Triebwerk.'],
+    'srb':['no','Brennt nur ein einziges Mal.','Nicht abschaltbar, nicht wiederzündbar, niedriger Isp.'],
+    'ss1-hybrid':['no','Nur für kurze Hüpfer gebaut.','Suborbital, nicht wiederzündbar, Isp ca. 250 s.'],
+    'mr-103':['no','Viel zu schwach.','Schub viel zu gering für eine Marsreise.'],
+    'coldgas-n2':['no','Viel zu schwach und nicht sparsam.','Schub viel zu gering, Isp nur ca. 73 s.'],
+    'xrs-2200':['no','Für den Start gedacht – und nie geflogen.','Höhenkompensation nützt im All nichts; nur Prüfstand.']
+   }},
+ { id:'eigen', t:'Eigene Mission', ke:'Du entscheidest', kf:'Gewichte selbst wählen',
+   w:{thrust:1,isp:2,restart:1,throttle:1,store:1,mature:1}, dir:'big', custom:true,
+   why:{ e:'Stell selbst ein, was deiner Mission wichtig ist. Die Karten sortieren sich sofort neu.',
+         f:'Stell die Gewichte selbst ein – die Karten sortieren sich live. Die Einordnung ist grob: berechnet aus deinen Gewichten und den normierten Daten, ohne harte Ausschlusskriterien.',
+         x:'Score = Σ wᵢ·vᵢ / Σ wᵢ mit vᵢ ∈ [0,1] (Schub/Isp log-normiert, „k. A.“ = 0). Gruppen relativ zum besten Score: ≥ 85 % „passt gut“, ≥ 60 % „teilweise“. Bewusst grob – Daten sind ca.-Werte.' },
+   rule:{ e:'Hier gibt es keine festen Regeln – nur deine Gewichte.', f:'Keine harten Ausschlüsse – nur Gewichtung. Echte Missionen haben Mindestanforderungen (siehe vordefinierte Missionen).' },
+   r:null }
+];
+const MI = Object.fromEntries(M.map(m => [m.id, m]));
+
+/* ================= Formatierung ================= */
+const nf = (x, d) => x.toLocaleString('de-DE', { maximumFractionDigits:d });
+const sig2 = x => { if (!x) return 0; const p = Math.pow(10, Math.floor(Math.log10(Math.abs(x))) - 1); return Math.round(x / p) * p; };
+const fm = v => nf(v, v < 1 ? 3 : v < 20 ? 1 : 0);
+function fmtThrust(v){
+  const r = rng(v); if (!r) return null;
+  const h = r[1]; let u, f;
+  if (h >= 10000) { u = 'MN'; f = 1e-3; } else if (h >= 1) { u = 'kN'; f = 1; } else if (h * 1000 >= 1) { u = 'N'; f = 1e3; } else { u = 'mN'; f = 1e6; }
+  const a = r[0] * f, b = r[1] * f;
+  return (a === b ? fm(a) : fm(a) + '–' + fm(b)) + ' ' + u;
+}
+function fmtWeight(v){                 // Schub als „Gewicht“, das er halten könnte (F/g₀)
+  const r = rng(v); if (!r) return null;
+  const kg = r.map(x => x * 1000 / 9.80665);
+  let u, f; if (kg[1] >= 1000) { u = 't'; f = 1e-3; } else if (kg[1] >= 1) { u = 'kg'; f = 1; } else { u = 'g'; f = 1e3; }
+  const a = sig2(kg[0] * f), b = sig2(kg[1] * f);
+  return 'wie ca. ' + (a === b ? nf(a, 1) : nf(a, 1) + '–' + nf(b, 1)) + ' ' + u;
+}
+const fmtIsp = v => { const r = rng(v); return r ? (r[0] === r[1] ? nf(r[0], 0) : nf(r[0], 0) + '–' + nf(r[1], 0)) + ' s' : null; };
+const chem = s => s.replace(/([A-Z][a-z]?|\))(\d+)/g, (m, a, d) => a + d.replace(/\d/g, c => '₀₁₂₃₄₅₆₇₈₉'[c]));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const NA = 'k. A.';
+const MAT = { e:{ 'fliegt':'im Einsatz', 'geflogen':'ist geflogen', 'nur Prüfstand':'nur getestet' } };
+const ynTxt = (s, L) => s == null ? NA : (L === 'e' ? ({ ja:'ja', nein:'nein', begrenzt:'etwas' }[s]) : s);
+
+/* ================= Zustand ================= */
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const S = { level:'f', mission:'boden', open:new Set(), custom:{ w:{ ...MI.eigen.w }, dir:'big' } };
+const $ = id => document.getElementById(id);
+const grid = $('grid');
+
+function weights(){ const m = MI[S.mission]; return m.custom ? S.custom.w : m.w; }
+function thrustDir(){ const m = MI[S.mission]; return m.custom ? S.custom.dir : m.dir; }
+function score(e){
+  const w = weights(), dir = thrustDir(); let s = 0, sw = 0;
+  CRIT.forEach(c => { const wi = w[c.k]; if (!wi) return; let v = e.v[c.k]; if (v == null) v = 0; if (c.k === 'thrust' && dir === 'small') v = 1 - v; s += wi * v; sw += wi; });
+  return sw ? s / sw : 0;
+}
+function critName(k, L){ const c = CRIT.find(c => c.k === k); return L === 'e' ? c.e : L === 'x' ? c.x : c.f; }
+
+/* Einordnung: vordefiniert = Regeln aus Brief; eigene = relativ zum besten Score */
+function classify(){
+  const m = MI[S.mission];
+  const list = D.map(e => ({ e, s:score(e) }));
+  if (!m.custom) list.forEach(o => { o.g = m.r[o.e.id][0]; });
+  else {
+    const best = Math.max(...list.map(o => o.s)) || 1;
+    list.forEach(o => { o.g = o.s >= best * 0.85 ? 'ideal' : o.s >= best * 0.6 ? 'ok' : 'no'; });
+  }
+  const go = { ideal:0, ok:1, no:2 };
+  list.sort((a, b) => go[a.g] - go[b.g] || b.s - a.s || a.e.name.localeCompare(b.e.name, 'de'));
+  return list;
+}
+function reason(o){
+  const m = MI[S.mission], L = S.level;
+  if (!m.custom) {
+    const r = m.r[o.e.id];
+    let t = L === 'e' ? r[1] : r[2];
+    if (L === 'x') t += ' ' + keyNums(o.e);
+    return t;
+  }
+  const w = S.custom.w, dir = S.custom.dir;
+  const val = k => { let v = o.e.v[k]; if (v == null) return null; return k === 'thrust' && dir === 'small' ? 1 - v : v; };
+  const act = CRIT.filter(c => w[c.k] > 0);
+  if (!act.length) return L === 'e' ? 'Stell oben mindestens einen Regler hoch.' : 'Keine Gewichte gesetzt.';
+  const strong = act.filter(c => (val(c.k) ?? 0) >= 0.66).sort((a, b) => w[b.k] - w[a.k]).slice(0, 2).map(c => critName(c.k, L));
+  const weak = act.filter(c => val(c.k) == null || val(c.k) <= 0.34).sort((a, b) => w[b.k] - w[a.k]).slice(0, 2).map(c => critName(c.k, L) + (val(c.k) == null ? ' (' + NA + ')' : ''));
+  const p = [];
+  if (strong.length) p.push((L === 'e' ? 'Gut bei: ' : 'Stark bei ') + strong.join(', '));
+  if (weak.length) p.push((L === 'e' ? 'schwach bei: ' : 'schwach bei ') + weak.join(', '));
+  let t = p.length ? p.join(' · ') + '.' : 'Überall Mittelmaß für deine Gewichte.';
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+function keyNums(e){
+  const p = [];
+  const ts = fmtThrust(e.tSL), tv = fmtThrust(e.tV);
+  if (ts) p.push('F MH ' + ts); if (tv) p.push('F Vak ' + tv);
+  const is = fmtIsp(e.iSL), iv = fmtIsp(e.iV);
+  if (is) p.push('Isp MH ' + is); if (iv) p.push('Isp Vak ' + iv);
+  return '(' + p.join(' · ') + ')';
+}
+
+/* ================= Illustrationen der Missionen ================= */
+const ILL = {
+ boden:`<svg viewBox="0 0 120 64" aria-hidden="true"><defs><linearGradient id="fg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".35" stop-color="#ffb054"/><stop offset="1" stop-color="#ff5a1f" stop-opacity="0"/></linearGradient></defs>
+   <path class="il il-m" d="M10 56h100"/><circle cx="40" cy="55" r="5" fill="#dfe2e7"/><circle cx="80" cy="55" r="6" fill="#dfe2e7"/><circle cx="48" cy="57" r="3.5" fill="#e6e8ec"/><circle cx="72" cy="57" r="4" fill="#e6e8ec"/>
+   <g class="lift"><path class="fl" d="M56 41h8l-4 14z" fill="url(#fg1)"/><path class="il" d="M55.5 41V20c0-6 4.5-10 4.5-10s4.5 4 4.5 10v21z" fill="#fff"/><path class="il" d="M55.5 34l-4 7h4M64.5 34l4 7h-4"/><circle cx="60" cy="24" r="2" class="il" /></g></svg>`,
+ ober:`<svg viewBox="0 0 120 64" aria-hidden="true"><defs><linearGradient id="fg2" x1="0" y1=".5" x2="1" y2=".5"><stop offset="0" stop-color="#ff5a1f" stop-opacity="0"/><stop offset=".6" stop-color="#ffb054"/><stop offset="1" stop-color="#fff3c4"/></linearGradient></defs>
+   <path d="M-6 64C20 46 100 46 126 64" fill="#dce7f5"/><path class="il il-m" d="M-6 64C20 46 100 46 126 64"/>
+   <circle cx="16" cy="12" r=".9" class="il-f"/><circle cx="96" cy="9" r=".9" class="il-f"/><circle cx="106" cy="30" r=".9" class="il-f"/><circle cx="34" cy="26" r=".7" class="il-f"/>
+   <g transform="rotate(-14 70 30)"><path class="fl" style="transform-origin:100% 50%" d="M42 28h14v4H42z" fill="url(#fg2)"/><path class="il" d="M56 26.5h16l6 3.5-6 3.5H56z" fill="#fff"/><path class="il" d="M56 25l-3 1.5v7L56 35"/></g>
+   <path class="il dash" stroke-dasharray="3 4" d="M18 44C40 34 70 26 108 22" style="stroke:var(--mute)"/></svg>`,
+ sonde:`<svg viewBox="0 0 120 64" aria-hidden="true"><circle cx="14" cy="50" r="7" fill="#ffd07a"/><circle cx="102" cy="18" r="9" fill="#d9d2c3"/><circle cx="99" cy="15" r="2" fill="#c6bda9"/><circle cx="105" cy="22" r="1.4" fill="#c6bda9"/>
+   <path class="il dash" stroke-dasharray="3 4" style="stroke:var(--ion)" d="M22 48C40 40 52 52 66 38S88 20 93 19"/>
+   <g transform="translate(60 42)"><rect x="-3" y="-3" width="6" height="6" rx="1" class="il" fill="#fff"/><path class="il" d="M-3 0h-8M3 0h8"/><path d="M-3 4l-1 6h8l-1-6z" fill="var(--ion)" opacity=".5"/></g></svg>`,
+ lage:`<svg viewBox="0 0 120 64" aria-hidden="true"><path d="M-6 64C20 54 100 54 126 64" fill="#dce7f5"/>
+   <g class="rot"><rect x="53" y="22" width="14" height="14" rx="2" class="il" fill="#fff"/><path class="il" d="M53 29H45M67 29h8"/><rect x="25" y="24" width="20" height="10" rx="1" class="il" fill="#e7ecf7"/><rect x="75" y="24" width="20" height="10" rx="1" class="il" fill="#e7ecf7"/><path class="il il-m" d="M35 24v10M85 24v10"/><path class="il" d="M60 22v-5"/><circle cx="60" cy="15.5" r="1.6" class="il"/>
+   <path d="M67 36l5 5" stroke="#b9c0cb" stroke-width="3" stroke-linecap="round" opacity=".8"/></g>
+   <path class="il" style="stroke:var(--mute)" d="M40 12a26 26 0 0 1 14-6"/><path class="il" style="stroke:var(--mute)" d="M51 3.5l3 2.5-3.5 2"/></svg>`,
+ mars:`<svg viewBox="0 0 120 64" aria-hidden="true"><circle cx="16" cy="44" r="8" fill="#9fc6ef"/><path d="M11 41c3 1 5-1 7 1s-1 4 2 5" class="il il-m"/><circle cx="102" cy="26" r="10" fill="#e4825a"/><circle cx="98" cy="22" r="2" fill="#c96a46"/><circle cx="105" cy="30" r="1.6" fill="#c96a46"/>
+   <path class="il dash" stroke-dasharray="3 4" d="M26 40C46 18 72 12 90 22" style="stroke:var(--mute)"/>
+   <g transform="translate(56 21) rotate(-14)"><circle r="5" fill="var(--fam-nuklear)" opacity=".18"/><path class="il" d="M-5-2h8l3 2-3 2h-8z" fill="#fff"/></g></svg>`,
+ eigen:`<svg viewBox="0 0 120 64" aria-hidden="true"><path class="il il-m" d="M28 18h64M28 32h64M28 46h64"/><path class="il" d="M28 18h22M28 32h44M28 46h12"/>
+   <g class="k1"><circle cx="50" cy="18" r="4.5" fill="#fff" class="il"/></g><g class="k2"><circle cx="72" cy="32" r="4.5" fill="#fff" class="il"/></g><g class="k1"><circle cx="40" cy="46" r="4.5" fill="#fff" class="il"/></g></svg>`
+};
+
+/* ================= Aufbau ================= */
+const ICON = {
+  ideal:'<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 6.3l2.2 2.2 4.6-4.9"/></svg>',
+  ok:'<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 6h6"/></svg>',
+  no:'<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3.5 3.5l5 5M8.5 3.5l-5 5"/></svg>'
+};
+const GRP = {
+  f:{ ideal:['Ideal','wofür es gebaut ist'], ok:['Möglich','geht – mit Abstrichen'], no:['Ungeeignet','passt nicht zur Aufgabe'] },
+  e:{ ideal:['Passt super','genau dafür gemacht'], ok:['Geht auch','mit Abstrichen'], no:['Passt nicht','falsches Werkzeug'] },
+  c:{ ideal:['Passt gut','nah am besten Score'], ok:['Teilweise','deutlich dahinter'], no:['Passt kaum','weit dahinter'] }
+};
+
+function buildMissions(){
+  $('missions').innerHTML = M.map(m => `<li><button class="mt" role="radio" data-m="${m.id}" aria-checked="${m.id === S.mission}">${ILL[m.id]}<span><b>${esc(m.t)}</b><small data-k="${m.id}"></small></span></button></li>`).join('');
+  $('missions').addEventListener('click', ev => { const b = ev.target.closest('.mt'); if (b) setMission(b.dataset.m); });
+  $('missions').addEventListener('keydown', ev => {
+    if (!['ArrowRight','ArrowLeft'].includes(ev.key)) return;
+    const i = M.findIndex(m => m.id === S.mission), n = (i + (ev.key === 'ArrowRight' ? 1 : -1) + M.length) % M.length;
+    setMission(M[n].id); $('missions').querySelector(`[data-m="${M[n].id}"]`).focus(); ev.preventDefault();
+  });
+}
+
+function profileRows(e){
+  return CRIT.map(c => {
+    const v = e.v[c.k];
+    let pv = '';
+    if (c.k === 'restart') pv = ynTxt(e.re, 'f');
+    else if (c.k === 'throttle') pv = ynTxt(e.thr, 'f');
+    else if (c.k === 'store') pv = v == null ? NA : v === 1 ? 'ja' : v === 0.5 ? 'teils' : 'nein';
+    else if (c.k === 'mature') pv = e.mat === 'nur Prüfstand' ? 'Prüfst.' : e.mat;
+    let ticks = '';
+    if (c.k === 'thrust') for (const d of [-3, 0, 3]) ticks += `<s style="left:${((d - T_LO) / (T_HI - T_LO) * 100).toFixed(2)}%"></s>`;
+    if (c.k === 'isp') [100, 1000].forEach(t => { ticks += `<s style="left:${((Math.log10(t) - I_LO) / (I_HI - I_LO) * 100).toFixed(2)}%"></s>`; });
+    const wpx = v == null ? 0 : Math.max(v * 100, v > 0 ? 3 : 0);
+    return `<div class="pr-row${c.ein ? ' e' : ''}" data-k="${c.k}"><span class="pl" data-c="${c.k}"></span><span class="tr"><b style="width:${wpx.toFixed(1)}%"></b>${ticks}</span><span class="pv">${v == null ? NA : (c.k === 'thrust' || c.k === 'isp') ? '' : esc(pv)}</span></div>`;
+  }).join('');
+}
+
+function buildCards(){
+  const html = ['ideal','ok','no'].map(g => `<div class="gh" data-g="${g}"><span class="gi ${g}">${ICON[g]}</span><b></b><span class="c"></span><span class="none" hidden>– keine –</span><p></p></div>`).join('') +
+  D.map(e => `<article class="card" data-id="${e.id}">
+    <div class="ci">
+      <div class="top"><span class="fam" style="--c:${FAM[e.fam].c}"><i></i>${esc(FAM[e.fam].n)}</span><span class="mat${e.mat === 'nur Prüfstand' ? ' test' : ''}" data-mat></span></div>
+      <h3 class="nm">${esc(e.name)}</h3>
+      <div class="ty">${esc(e.typ)}</div>
+      <div class="pr">${profileRows(e)}</div>
+      <div class="ks"></div>
+      <p class="why"><span class="gi"></span><span class="wt"></span></p>
+      <button class="more" aria-expanded="false" aria-controls="det-${e.id}"><span>Steckbrief</span><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5L6 8l3.5-3.5"/></svg></button>
+      <div class="det" id="det-${e.id}"><div><div class="di"></div></div></div>
+    </div></article>`).join('');
+  grid.innerHTML = html;
+}
+
+function statsHTML(e, L){
+  const k = (l, v, tag) => `<div class="k"><span>${l}</span><b>${v == null ? NA : esc(v)}${tag ? `<small>${tag}</small>` : ''}</b></div>`;
+  if (L === 'e') return k('Kraft', fmtWeight(e.tSL || e.tV)) + k('Treibstoff', e.fe);
+  if (L === 'f') {
+    const t = e.tSL ? [fmtThrust(e.tSL), 'MH'] : [fmtThrust(e.tV), 'Vak'];
+    const i = e.iV ? [fmtIsp(e.iV), 'Vak'] : [fmtIsp(e.iSL), 'MH'];
+    return k('Schub', t[0], t[1]) + k('Isp', i[0], i[1]);
+  }
+  const both = (a, b) => (a || NA) + ' / ' + (b || NA);
+  return k('Schub MH / Vak', both(fmtThrust(e.tSL), fmtThrust(e.tV))) + k('Isp MH / Vak', both(fmtIsp(e.iSL), fmtIsp(e.iV))) + k('Kammerdruck', e.pc == null ? null : nf(e.pc, 0) + ' bar');
+}
+
+function detailHTML(e, L){
+  const row = (a, b) => `<dt>${a}</dt><dd>${b == null ? NA : esc(b)}</dd>`;
+  let dl = row(L === 'e' ? 'Treibstoff' : 'Treibstoffe', L === 'e' ? e.fe : chem(e.fuel));
+  if (L !== 'e') dl += row('Typ', e.typ) + row('Einsatz', e.use);
+  dl += row(L === 'e' ? 'Erprobt?' : 'Reifegrad', L === 'e' ? MAT.e[e.mat] : e.mat);
+  if (L === 'x') {
+    dl += row('Kammerdruck', e.pc == null ? null : nf(e.pc, 0) + ' bar') + row('Masse (trocken)', e.m == null ? null : (e.m >= 1000 ? nf(e.m / 1000, 2) + ' t' : nf(e.m, 2) + ' kg'));
+    if (e.m && e.tMax) dl += row('Schub/Gewicht', 'ca. ' + nf(sig2(e.tMax * 1000 / (e.m * 9.80665)), 1));
+    dl += row('Wiederzündbar', ynTxt(e.re, 'f')) + row('Regelbar', ynTxt(e.thr, 'f'));
+  }
+  if (L !== 'e') dl += row('Bemerkung', e.note.replace(/(\d)\.(\d)/g, '$1,$2'));
+  const n = L === 'e' ? 1 : 3;
+  const li = a => a.slice(0, n).map(s => `<li>${esc(s)}</li>`).join('');
+  return `<dl class="dl">${dl}</dl><div class="pc"><div class="plus"><h4>Stärken</h4><ul>${li(e.pro)}</ul></div><div><h4>Schwächen</h4><ul>${li(e.con)}</ul></div></div>
+    <button class="go3d" data-3d="${e.id}"><i><svg viewBox="0 0 12 12" fill="#fff"><path d="M3.5 2.2v7.6L9.8 6z"/></svg></i>Im 3D-Modell ansehen</button>`;
+}
+
+/* Texte je Stufe (ohne Neusortierung) */
+function applyLevel(){
+  const L = S.level;
+  document.body.className = 'lvl-' + L;
+  $('lead').textContent = {
+    e:'Ein Hammer ist super für Nägel, aber schlecht für Schrauben. Bei Triebwerken ist es genauso: Wähle eine Aufgabe – und sieh zu, welche Triebwerke dafür gemacht sind.',
+    f:'Wähle zuerst eine Aufgabe. Jede Mission gewichtet Schub, Isp, Wiederzündbarkeit & Co. anders – die 13 Triebwerke sortieren sich danach in „ideal“, „möglich“ und „ungeeignet“.',
+    x:'Jede Mission definiert Ausschlusskriterien und Gewichte über sechs normierte Kriterien (Schub und Isp logarithmisch). Die Einordnung ist qualitativ; die Reihenfolge innerhalb einer Gruppe folgt dem gewichteten Profil.'
+  }[L];
+  M.forEach(m => { $('missions').querySelector(`[data-k="${m.id}"]`).textContent = L === 'e' ? m.ke : m.kf; });
+  grid.querySelectorAll('.pl').forEach(el => { el.textContent = critName(el.dataset.c, L); });
+  D.forEach(e => {
+    const c = card(e.id);
+    c.querySelector('[data-mat]').textContent = L === 'e' ? MAT.e[e.mat] : e.mat;
+    c.querySelector('.ks').innerHTML = statsHTML(e, L);
+    c.querySelector('.di').innerHTML = detailHTML(e, L);
+    c.querySelector('.more span').textContent = L === 'e' ? 'Mehr erfahren' : 'Steckbrief';
+  });
+  $('key').innerHTML = keyHTML(L);
+  $('tblSub').textContent = L === 'e' ? '– für alle, die es genau wissen wollen' : '– alle Zahlen auf einen Blick';
+  renderPanel(false); updateCards(false);
+}
+function keyHTML(L){
+  const famHTML = Object.values(FAM).map(f => `<span class="fams"><i style="background:${f.c}"></i>${f.n}</span>`).join('');
+  if (L === 'e') return `<span><i style="background:var(--bar-on)"></i>wichtig für diese Mission</span><span><i style="background:var(--bar-off)"></i>hier egal</span>${famHTML}`;
+  return `<span><i style="background:var(--bar-on)"></i>zählt für diese Mission</span><span><i style="background:var(--bar-off)"></i>zählt nicht</span><span>Gleiche Skala auf allen Karten · Schub &amp; Isp logarithmisch${L === 'x' ? ' (Striche: 1 N · 1 kN · 1 MN bzw. 100 s · 1000 s)' : ''} · ${NA} = nicht belegt</span>${famHTML}`;
+}
+
+/* Missions-Panel */
+function renderPanel(anim){
+  const m = MI[S.mission], L = S.level, w = weights(), dir = thrustDir();
+  const crits = L === 'e' ? CRIT.filter(c => c.ein || w[c.k] > 0) : CRIT;
+  const rows = crits.map(c => {
+    const wi = w[c.k];
+    const dirTxt = c.k === 'thrust' && dir === 'small' ? `<em>${L === 'e' ? '(wenig!)' : '(klein gewünscht)'}</em>` : '';
+    if (m.custom) {
+      const dirCtl = c.k === 'thrust' ? `<span class="dir" role="group" aria-label="Schub soll"><button data-dir="big" aria-pressed="${dir === 'big'}">viel</button><button data-dir="small" aria-pressed="${dir === 'small'}">wenig</button></span>` : '';
+      return `<div class="wr${wi ? '' : ' z'}"><span class="n">${esc(c.k === 'store' && L !== 'e' ? 'Lagerfähig / einfach' : critName(c.k, L === 'x' ? 'f' : L))}${dirCtl}</span><input type="range" min="0" max="3" step="1" value="${wi}" data-w="${c.k}" aria-label="Gewicht ${esc(critName(c.k, 'f'))}"></div>`;
+    }
+    return `<div class="wr${wi ? '' : ' z'}"><span class="n">${esc(c.k === 'store' && L !== 'e' ? 'Lagerfähig / einfach' : critName(c.k, L === 'x' ? 'f' : L))}${dirTxt}</span><span class="pips" aria-label="Gewicht ${wi} von 3">${[1,2,3].map(i => `<i class="${i <= wi ? 'on' : ''}"></i>`).join('')}</span></div>`;
+  }).join('');
+  const head = L === 'e' ? 'Was zählt?' : 'Gewichtung';
+  const sub = L === 'x' ? '<span>0–3</span>' : '';
+  $('panel').innerHTML = `<div class="${anim ? 'fade-in' : ''}"><h2>${L === 'e' ? 'Warum so?' : 'Warum diese Gewichtung?'}</h2><p>${esc(m.why[L])}</p>
+      <p class="rule"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="6.5"/><path d="M5 5l6 6"/></svg><span>${esc(m.rule[L === 'e' ? 'e' : 'f'])}</span></p>
+      ${m.custom ? '' : `<button class="tune" id="tune">${L === 'e' ? 'Selbst ausprobieren' : 'Diese Gewichtung anpassen'} <span aria-hidden="true">→</span></button>`}</div>
+    <div class="${anim ? 'fade-in' : ''}" style="animation-delay:.06s"><div class="w-h"><span>${head}</span>${sub}</div><div class="wl">${rows}</div></div>`;
+}
+
+$('panel').addEventListener('click', ev => {
+  if (ev.target.closest('#tune')) {
+    const m = MI[S.mission]; S.custom.w = { ...m.w }; S.custom.dir = m.dir; setMission('eigen'); return;
+  }
+  const d = ev.target.closest('[data-dir]');
+  if (d) { S.custom.dir = d.dataset.dir; $('panel').querySelectorAll('[data-dir]').forEach(b => b.setAttribute('aria-pressed', b === d)); liveUpdate(); }
+});
+$('panel').addEventListener('input', ev => {
+  const r = ev.target.closest('[data-w]'); if (!r) return;
+  S.custom.w[r.dataset.w] = +r.value; r.closest('.wr').classList.toggle('z', !+r.value); liveUpdate();
+});
+
+/* ================= Sortieren mit FLIP (Feder, gestaffelt, unterbrechbar) ================= */
+function springEase(z = .74, w = 10.5, n = 48){
+  const wd = w * Math.sqrt(1 - z * z), p = [];
+  for (let i = 0; i <= n; i++) { const t = i / n; p.push(+(1 - Math.exp(-z * w * t) * (Math.cos(wd * t) + (z * w / wd) * Math.sin(wd * t))).toFixed(4)); }
+  p[n] = 1; return 'linear(' + p.join(', ') + ')';
+}
+const EASE = (window.CSS && CSS.supports('transition-timing-function', 'linear(0, 1)')) ? springEase() : 'cubic-bezier(.3,.05,.12,1)';
+const card = id => grid.querySelector(`.card[data-id="${id}"]`);
+
+function flip(mutate, opt = {}){
+  const dur = opt.dur || 760, st = opt.stagger ?? 22;
+  const els = [...grid.children];
+  const first = new Map(els.map(el => [el, el.getBoundingClientRect()]));
+  els.forEach(el => { if (el._fa) { el._fa.cancel(); el._fa = null; el.classList.remove('mv'); } });
+  mutate();
+  if (reduced) return;
+  let i = 0;
+  for (const el of grid.children) {
+    const a = first.get(el); if (!a) continue;
+    const b = el.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top;
+    if (Math.abs(dx) < .5 && Math.abs(dy) < .5) continue;
+    el.classList.add('mv');
+    const an = el.animate([{ transform:`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px)` }, { transform:'none' }], { duration:dur, easing:EASE, delay:Math.min(i * st, 300), fill:'backwards' });
+    el._fa = an; an.onfinish = () => { el._fa = null; el.classList.remove('mv'); };
+    i++;
+  }
+}
+
+let lastOrder = '';
+function updateCards(animate){
+  const list = classify(), m = MI[S.mission], L = S.level, w = weights();
+  const G = m.custom ? GRP.c : (L === 'e' ? GRP.e : GRP.f);
+  const order = [], counts = { ideal:0, ok:0, no:0 };
+  ['ideal','ok','no'].forEach(g => { order.push(grid.querySelector(`.gh[data-g="${g}"]`)); list.filter(o => o.g === g).forEach(o => { order.push(card(o.e.id)); counts[g]++; }); });
+  const key = order.map(el => el.dataset.g || el.dataset.id).join('|');
+
+  // Inhalte (ohne Layout-Größenänderung) aktualisieren
+  ['ideal','ok','no'].forEach(g => {
+    const h = grid.querySelector(`.gh[data-g="${g}"]`);
+    h.querySelector('b').textContent = G[g][0]; h.querySelector('.c').textContent = counts[g];
+    h.querySelector('p').textContent = G[g][1]; h.querySelector('.none').hidden = counts[g] > 0;
+  });
+  list.forEach(o => {
+    const c = card(o.e.id);
+    c.classList.toggle('no', o.g === 'no');
+    const gi = c.querySelector('.why .gi');
+    if (gi.dataset.g !== o.g) { gi.className = 'gi ' + o.g; gi.innerHTML = ICON[o.g]; gi.dataset.g = o.g; }
+    const wt = c.querySelector('.wt'), t = reason(o);
+    if (wt.textContent !== t) { wt.textContent = t; if (animate && !reduced) { wt.classList.remove('swap'); void wt.offsetWidth; wt.classList.add('swap'); } }
+    c.querySelectorAll('.pr-row').forEach(r => r.classList.toggle('w', w[r.dataset.k] > 0));
+    c.setAttribute('aria-label', `${o.e.name}: ${G[o.g][0]}`);
+  });
+
+  if (key === lastOrder) return;
+  lastOrder = key;
+  const mutate = () => {
+    const act = document.activeElement;
+    grid.append(...order);
+    if (act && grid.contains(act) && document.activeElement !== act) act.focus({ preventScroll:true });
+  };
+  if (animate) flip(mutate, animate === 'live' ? { dur:620, stagger:10 } : {}); else mutate();
+}
+
+function setMission(id){
+  if (id === S.mission) return;
+  S.mission = id;
+  $('missions').querySelectorAll('.mt').forEach(b => b.setAttribute('aria-checked', b.dataset.m === id));
+  renderPanel(true);
+  updateCards(true);
+}
+
+// Live-Sortierung beim Schieben: gedrosselt, sortiert nur bei geänderter Reihenfolge
+let tLast = 0, tTimer = 0;
+function liveUpdate(){
+  const run = () => { tLast = performance.now(); tTimer = 0; updateCards('live'); };
+  const dt = performance.now() - tLast;
+  if (dt > 260) run(); else if (!tTimer) tTimer = setTimeout(run, 260 - dt);
+}
+
+/* ================= Interaktion Karten ================= */
+function toggleCard(c){
+  const open = !c.classList.contains('open');
+  c.classList.toggle('open', open);
+  c.querySelector('.more').setAttribute('aria-expanded', open);
+}
+grid.addEventListener('click', ev => {
+  const g3 = ev.target.closest('[data-3d]');
+  if (g3) {
+    const id = g3.dataset['3d'];
+    window.dispatchEvent(new CustomEvent('engine:open3d', { detail:{ id } }));
+    toast(`Platzhalter – hier springt die Seite später ins 3D-Modell. Event <code>engine:open3d</code> · id <code>${esc(id)}</code>`);
+    return;
+  }
+  const c = ev.target.closest('.card'); if (!c) return;
+  if (ev.target.closest('.det') && !ev.target.closest('.more')) return;   // Text im Steckbrief markierbar lassen
+  if (getSelection && String(getSelection()).length > 0 && !ev.target.closest('.more')) return;
+  toggleCard(c);
+});
+
+// Tooltip auf Profilzeilen (Wert zuerst, Kriterium danach)
+const tip = $('tip');
+let tipRow = null;
+grid.addEventListener('pointermove', ev => {
+  const r = ev.target.closest('.pr-row');
+  if (!r) { if (tipRow) { tip.classList.remove('on'); tipRow = null; } return; }
+  if (r !== tipRow) {
+    tipRow = r;
+    const e = D.find(d => d.id === r.closest('.card').dataset.id), k = r.dataset.k, L = S.level;
+    let v, sub = critName(k, L);
+    if (k === 'thrust') { v = [e.tSL && fmtThrust(e.tSL) + ' (MH)', e.tV && fmtThrust(e.tV) + ' (Vak)'].filter(Boolean).join(' · '); sub += ' · log-Skala, gleiche für alle'; }
+    else if (k === 'isp') { v = [e.iSL && fmtIsp(e.iSL) + ' (MH)', e.iV && fmtIsp(e.iV) + ' (Vak)'].filter(Boolean).join(' · '); sub += ' · log-Skala, gleiche für alle'; }
+    else if (k === 'restart') v = ynTxt(e.re, 'f');
+    else if (k === 'throttle') v = ynTxt(e.thr, 'f') + (e.thr === 'ja' && /regelbar/.test(e.note) ? ' – ' + e.note.match(/regelbar[^;]*/)[0] : '');
+    else if (k === 'store') v = e.store[1];
+    else v = e.mat;
+    tip.textContent = '';
+    const b = document.createElement('b'); b.textContent = v || NA; tip.append(b, document.createTextNode(sub));
+    tip.classList.add('on');
+  }
+  const x = Math.round(Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8)), y = Math.round(ev.clientY - tip.offsetHeight - 12);
+  tip.style.transform = `translate(${x}px,${Math.max(8, y)}px)`;
+});
+grid.addEventListener('pointerleave', () => { tip.classList.remove('on'); tipRow = null; });
+addEventListener('scroll', () => { if (tipRow) { tip.classList.remove('on'); tipRow = null; } }, { passive:true });
+
+let toastT = 0;
+function toast(html){ const t = $('toast'); t.innerHTML = html; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 3600); }
+
+/* Stufen-Schalter */
+function placeKnob(){
+  const seg = $('seg'), b = seg.querySelector('[aria-checked="true"]'), k = seg.querySelector('.knob');
+  k.style.width = b.offsetWidth + 'px'; k.style.transform = `translateX(${b.offsetLeft - 4}px)`;
+}
+$('seg').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-l]'); if (!b || b.dataset.l === S.level) return;
+  $('seg').querySelectorAll('[data-l]').forEach(x => x.setAttribute('aria-checked', x === b));
+  S.level = b.dataset.l; placeKnob(); applyLevel();
+});
+addEventListener('resize', placeKnob);
+
+/* Tabelle */
+function buildTable(){
+  const c = (v, n) => v == null ? `<td class="na${n ? ' n' : ''}">${NA}</td>` : `<td${n ? ' class="n"' : ''}>${esc(v)}</td>`;
+  const head = ['Triebwerk','Familie','Typ','Treibstoffe','Schub MH','Schub Vak','Isp MH','Isp Vak','Kammerdruck','Masse','Wiederzündbar','Regelbar','Einsatz','Reifegrad'];
+  $('table').innerHTML = `<thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>` + D.map(e => `<tr>
+    <td><b>${esc(e.name)}</b></td><td>${esc(FAM[e.fam].n)}</td><td>${esc(e.typ)}</td><td>${esc(chem(e.fuel))}</td>
+    ${c(fmtThrust(e.tSL), 1)}${c(fmtThrust(e.tV), 1)}${c(fmtIsp(e.iSL), 1)}${c(fmtIsp(e.iV), 1)}
+    ${c(e.pc == null ? null : e.pc + ' bar', 1)}${c(e.m == null ? null : nf(e.m, 2) + ' kg', 1)}
+    ${c(e.re)}${c(e.thr)}<td>${esc(e.use)}</td><td>${esc(e.mat)}</td></tr>`).join('') + '</tbody>';
+}
+
+/* Start */
+buildMissions(); buildCards(); buildTable(); applyLevel();
+requestAnimationFrame(placeKnob);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeKnob);
+window.__v3 = { S, D, M, classify, setMission };   // für Tests
+})();
+</script>
+</body>
+</html>

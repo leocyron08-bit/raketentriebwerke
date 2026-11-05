@@ -1,0 +1,8 @@
+{
+  "title": "Kombi L1 + L4 – klar gegliedert, verstellbar",
+  "round": 8,
+  "variants": [
+    { "id": "K1", "name": "Bereiche zuerst", "file": "variant-k1.html", "idea": "Grundgerüst L1 (Bereiche Triebwerke · Lernen · Vergleich, ein Kapitel zur Zeit) mit L4-Optik und einklappbarer Antriebsleiste; Splitter zwischen Bühne und Panel." },
+    { "id": "K2", "name": "Bühne zuerst", "file": "variant-k2.html", "idea": "Grundgerüst L4 (Seitenleiste, große Bühne, Drawer) mit L1-Bereichen und Kapiteln im Drawer; Drawer und Seitenleiste in der Breite ziehbar." }
+  ]
+}

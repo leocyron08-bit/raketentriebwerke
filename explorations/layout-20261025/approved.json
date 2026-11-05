@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-27",
+  "favorite": "L1",
+  "ratings": { "L1": 4, "L2": 1, "L3": 2, "L4": 4 },
+  "decisions": [
+    "Weiter mit L1 (App-Bereiche, ein Kapitel zur Zeit) und L4 (Bühne zuerst, Seitenleiste, Drawer, sehr ansprechende Ansicht)",
+    "L2 Kapitel-Index und L3 Bento verworfen",
+    "Eine gemeinsame Informationsarchitektur: jeder Inhalt genau ein Zuhause, sonst nur Verweise",
+    "Orientierung: Brotkrumen, Zurück überall, Browser-Zurück, Esc = eine Ebene hoch",
+    "Größenverstellbare Fenster (Splitter), gemerkt"
+  ],
+  "next_steps": ["Runde 8 kombi-20261027: K1 (Basis L1) und K2 (Basis L4)"]
+}

@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-21",
+  "favorite": "R1",
+  "ratings": { "R1": 5, "R2": 1, "R3": 1, "R4": 4 },
+  "decisions": [
+    "Basis ist R1 Akkordeon komplett (Aufbau, Inhalte, Animationen)",
+    "Vergleichstabelle zwischen den vier Antrieben aus R4 (Ende der Seite) übernehmen",
+    "Drilldown-Detailseiten (R2) und Kapitel-Reiter (R3) verworfen"
+  ],
+  "next_steps": [
+    "Runde 4: EINE zusammengeführte Version – Animationen verfeinern, Wechsel zwischen Bauteilen smoother"
+  ]
+}

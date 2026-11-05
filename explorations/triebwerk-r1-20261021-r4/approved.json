@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-21",
+  "favorite": "F1",
+  "ratings": { "F1": 4 },
+  "decisions": [
+    "F1 ist die Basis des Endprodukts",
+    "Bauteile direkt im 3D-Modell anklickbar machen (auch wenn ein anderes Teil ausgewählt/abgedunkelt ist)",
+    "Bauteilwechsel weiter verbessern"
+  ],
+  "issues": ["Klick-Picking ignoriert abgedunkelte Teile (dim < 0.3) – nach einer Auswahl sind andere Teile im 3D nicht mehr anklickbar"],
+  "next_steps": ["Runde 5: EINE finale Version (Endprodukt), maximale Qualität"]
+}

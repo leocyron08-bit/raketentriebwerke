@@ -1,0 +1,1094 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Antriebs-Landkarte</title>
+<meta name="description" content="Variante V1 · Landkarte: alle 13 Triebwerke als Blasendiagramm – Schub (logarithmisch) gegen spezifischen Impuls, umschaltbar Meereshöhe/Vakuum.">
+<meta name="theme-color" content="#eef0f3">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Tokens aus variant-e2 (Endprodukt) */
+  --bg:#eef0f3; --ink:#0c0e13; --ink2:#3a3f4a; --mute:#737a87; --line:rgba(12,14,19,.09); --line2:rgba(12,14,19,.14);
+  --card:#ffffff; --accent:#0a66ff;
+  --shadow:0 24px 48px -30px rgba(20,24,40,.34), 0 2px 8px rgba(20,24,40,.05);
+  --shadow-s:0 8px 20px -12px rgba(20,24,40,.30), 0 1px 3px rgba(20,24,40,.06);
+  --ease:cubic-bezier(.2,.8,.2,1); --ease-spr:cubic-bezier(.3,.05,.12,1);
+  --d-s:.25s; --d-m:.5s; --d-l:.9s;
+  --r-xl:28px; --r-md:16px; --r-sm:12px;
+  /* Chart-Chrome */
+  --grid:rgba(12,14,19,.075); --axis:rgba(12,14,19,.26); --tray:#c9ccd3;
+  /* Familien – validiert (dataviz validate_palette, all-pairs, hell): Normal ≥ 15,5; CVD-Warnband → Form + Direktlabel als Zweitcodierung */
+  --f-fest:#eb6834; --f-fluessig:#2a78d6; --f-sonder:#5b6e00; --f-elek:#c040b0; --f-nuk:#1baf7a;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none !important}
+
+.badge{position:fixed;top:14px;right:14px;z-index:50;display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;
+  font:600 11px/1 Sora,sans-serif;letter-spacing:.04em;color:var(--ink);background:rgba(255,255,255,.72);border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--shadow-s)}
+.badge i{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+
+.wrap{max-width:1280px;margin:0 auto;padding:48px clamp(16px,3vw,40px) 80px}
+.eyebrow{font:600 11px/1.3 Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 14px}
+h2{font:600 clamp(28px,3.2vw,40px)/1.05 Sora,sans-serif;letter-spacing:-.04em;margin:0}
+.lead{font:400 16.5px/1.6 Manrope,sans-serif;color:var(--ink2);margin:14px 0 0;max-width:62ch;transition:opacity var(--d-s) var(--ease)}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:24px}
+
+/* Segment-Umschalter (wie e2 .lv) */
+.lv{position:relative;display:inline-flex;padding:4px;border-radius:999px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow-s)}
+.lv button{position:relative;z-index:1;appearance:none;-webkit-appearance:none;border:0;background:none;cursor:pointer;height:34px;padding:0 14px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:7px;font:600 12.5px/1 Manrope,sans-serif;color:var(--ink2);white-space:nowrap;transition:color .3s var(--ease) .08s}
+.lv button[aria-checked="true"]{color:#fff}
+.lv .ind{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:999px;background:var(--ink);transition:transform .45s var(--ease-spr),width .45s var(--ease-spr)}
+.lv .st{display:inline-flex;gap:2px}
+.lv .st b{width:3px;height:9px;border-radius:2px;background:currentColor;opacity:.25}
+.lv .st b.f{opacity:1}
+.lvk{font:600 10.5px/1 Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-right:10px}
+.ctl{display:flex;align-items:center}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center;margin-bottom:14px}
+.filters{display:flex;flex-wrap:wrap;gap:10px 22px;margin-bottom:20px}
+.fg{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.chip{appearance:none;-webkit-appearance:none;cursor:pointer;height:32px;padding:0 12px 0 10px;border-radius:999px;border:1px solid var(--line2);background:transparent;
+  display:inline-flex;align-items:center;gap:7px;font:600 12.5px/1 Manrope,sans-serif;color:var(--ink2);
+  transition:background .3s var(--ease),border-color .3s var(--ease),color .3s var(--ease),box-shadow .3s var(--ease),opacity .3s}
+.chip:hover{background:rgba(255,255,255,.6)}
+.chip[aria-pressed="true"]{background:var(--card);border-color:transparent;color:var(--ink);box-shadow:var(--shadow-s)}
+.chip[aria-pressed="false"]{color:var(--mute)}
+.chip[aria-pressed="false"] svg{opacity:.35}
+.chip svg{width:12px;height:12px;flex:none;transition:opacity .3s}
+.chip .n{font:600 10.5px/1 Sora,sans-serif;color:var(--mute);font-variant-numeric:tabular-nums}
+.chip.use{padding:0 12px}
+
+/* Karte + Info */
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+.mapc{position:relative;background:var(--card);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:18px 18px 12px;min-width:0}
+.insight{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 18px;padding:2px 6px 10px;font:500 12.5px/1.4 Manrope,sans-serif;color:var(--mute)}
+.insight b{font:600 15px/1.2 Sora,sans-serif;color:var(--ink);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+#chart{position:relative;width:100%}
+#chart svg{display:block;width:100%;overflow:visible;-webkit-tap-highlight-color:transparent}
+.note{font:500 12px/1.5 Manrope,sans-serif;color:var(--mute);margin:6px 6px 4px}
+
+/* SVG-Teile */
+.grid-l{stroke:var(--grid);stroke-width:1;shape-rendering:crispEdges}
+.axis-l{stroke:var(--axis);stroke-width:1;shape-rendering:crispEdges}
+.tk{font:500 11px/1 Manrope,sans-serif;fill:var(--mute);font-variant-numeric:tabular-nums}
+.tk2{font:500 10px/1 Manrope,sans-serif;fill:var(--mute);opacity:.8}
+.ax-t{font:600 12px/1 Sora,sans-serif;fill:var(--ink2);letter-spacing:-.01em}
+.zones{transition:opacity 1s var(--ease)}
+.zone rect{fill:rgba(12,14,19,.028)}
+.zone .zt{font:600 12.5px/1 Sora,sans-serif;fill:var(--ink2);letter-spacing:-.015em}
+.zone .zs{font:500 11px/1 Manrope,sans-serif;fill:var(--mute)}
+.ztxt{transition:opacity .35s var(--ease)}
+.tray-t{font:600 10.5px/1 Sora,sans-serif;letter-spacing:.12em;text-transform:uppercase;fill:var(--mute)}
+.tray-bg{fill:rgba(12,14,19,.03)}
+.nd{cursor:pointer;outline:none}
+.nd .mk{stroke-width:2;transition:fill .5s var(--ease),stroke .5s var(--ease),opacity .3s var(--ease)}
+.nd .rg{stroke-width:2;stroke-linecap:round;opacity:.5;transition:stroke .5s var(--ease),opacity .3s}
+.nd .hit{fill:transparent}
+.nd .pr{fill:none;stroke:var(--ink);stroke-width:1.5;opacity:0;transition:opacity .3s var(--ease)}
+.nd.pin .pr{opacity:1}
+.nd:focus-visible .pr{opacity:1;stroke:var(--accent);stroke-width:2.5}
+svg.hl-on .nd:not(.is-hl):not(.pin) .mk, svg.hl-on .nd:not(.is-hl):not(.pin) .rg{opacity:.28}
+svg.hl-on .lb:not(.is-hl):not(.pin){fill-opacity:.32;stroke-opacity:.32}
+.lb{font:600 12px/1 Manrope,sans-serif;fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:3.5px;stroke-linejoin:round;pointer-events:none;transition:fill-opacity .3s var(--ease),stroke-opacity .3s var(--ease)}
+.lb.tr{font-size:10.5px}
+.lb .ka{font-weight:500;fill:var(--mute)}
+.guide{stroke:var(--ink);stroke-opacity:.35;stroke-width:1;shape-rendering:crispEdges}
+.pill rect{fill:var(--ink)}
+.pill text{font:600 11px/1 Sora,sans-serif;fill:#fff;font-variant-numeric:tabular-nums}
+.link{stroke:var(--ink);stroke-width:1.5;stroke-opacity:.55;fill:none}
+.lpill rect{fill:#fff;stroke:var(--line2)}
+.lpill text{font:600 11.5px/1 Sora,sans-serif;fill:var(--ink);font-variant-numeric:tabular-nums}
+.fade{transition:opacity .35s var(--ease)}
+
+/* Info-Karte */
+.info{position:sticky;top:20px;background:var(--card);border-radius:var(--r-xl);box-shadow:var(--shadow);padding:22px 22px 20px;min-height:260px}
+.info-in{transition:opacity .18s var(--ease)}
+.info-in.out{opacity:0}
+.i-k{font:600 10.5px/1.3 Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.i-k .x{margin-left:auto;appearance:none;border:1px solid var(--line2);background:none;border-radius:999px;height:26px;padding:0 10px;cursor:pointer;
+  font:600 11px/1 Manrope,sans-serif;letter-spacing:0;text-transform:none;color:var(--ink2)}
+.i-k .x:hover{background:var(--bg)}
+.i-h{display:flex;align-items:center;gap:10px}
+.i-h svg{width:16px;height:16px;flex:none}
+.i-n{font:600 21px/1.15 Sora,sans-serif;letter-spacing:-.03em;margin:0}
+.i-t{font:500 13px/1.45 Manrope,sans-serif;color:var(--mute);margin:4px 0 14px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 14px}
+.kpi{background:var(--bg);border-radius:var(--r-sm);padding:11px 12px}
+.kpi b{display:block;font:600 19px/1.1 Sora,sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi b.na{font:500 13px/1.3 Manrope,sans-serif;color:var(--mute);padding-top:3px}
+.kpi span{display:block;font:500 11.5px/1.3 Manrope,sans-serif;color:var(--mute);margin-top:4px}
+.spec{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.spec:last-of-type{border-bottom:1px solid var(--line)}
+.spec span{color:var(--mute);flex:none}
+.spec b{font:600 13px/1.35 Sora,sans-serif;font-variant-numeric:tabular-nums;text-align:right;letter-spacing:-.01em}
+.spec b.na{font:500 12.5px/1.35 Manrope,sans-serif;color:var(--mute)}
+.mt{width:100%;border-collapse:collapse;margin:4px 0 12px;font-size:12.5px}
+.mt th,.mt td{padding:7px 4px;border-top:1px solid var(--line);text-align:right;font:600 12.5px/1.3 Sora,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.mt th{font:500 11.5px/1.3 Manrope,sans-serif;color:var(--mute);text-align:left}
+.mt thead th{text-align:right;border-top:0}
+.mt thead th:first-child{text-align:left}
+.mt td.na{font:500 12px/1.3 Manrope,sans-serif;color:var(--mute)}
+.formula{font:500 12.5px/1.55 Sora,sans-serif;color:var(--ink2);background:var(--bg);border-radius:var(--r-sm);padding:9px 12px;margin:10px 0 0}
+.rem{font:500 12.5px/1.5 Manrope,sans-serif;color:var(--ink2);margin:12px 0 0}
+.hint{font:500 12px/1.5 Manrope,sans-serif;color:var(--mute);margin:12px 0 0}
+.tagr{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;background:var(--bg);font:600 11px/1 Manrope,sans-serif;color:var(--ink2)}
+.tagr i{width:6px;height:6px;border-radius:50%;background:var(--ink2)}
+.tagr.test i{background:transparent;border:1.5px solid var(--ink2)}
+.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:14px}
+.vs .e{display:flex;align-items:center;gap:8px;min-width:0}
+.vs .e:last-child{justify-content:flex-end;text-align:right}
+.vs .e b{font:600 15px/1.2 Sora,sans-serif;letter-spacing:-.02em;overflow-wrap:anywhere}
+.vs .e svg{width:13px;height:13px;flex:none}
+.vs .v{font:600 10.5px/1 Sora,sans-serif;color:var(--mute);letter-spacing:.1em}
+.ratio{background:var(--bg);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px}
+.ratio b{display:block;font:600 22px/1.1 Sora,sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.ratio span{display:block;font:500 12.5px/1.4 Manrope,sans-serif;color:var(--ink2);margin-top:4px}
+.ratio.na b{font:500 13px/1.4 Manrope,sans-serif;color:var(--mute)}
+.def p{font:400 14px/1.6 Manrope,sans-serif;color:var(--ink2);margin:0 0 12px}
+.def .steps{display:grid;gap:8px;margin:14px 0 0;padding:0;list-style:none}
+.def .steps li{display:flex;gap:10px;align-items:flex-start;font:500 12.5px/1.45 Manrope,sans-serif;color:var(--ink2)}
+.def .steps li i{flex:none;width:20px;height:20px;border-radius:50%;background:var(--bg);display:grid;place-items:center;font:700 10px/1 Sora,sans-serif;font-style:normal;color:var(--ink)}
+
+/* Tabelle (Fallback) */
+.tbl{margin-top:20px;background:var(--card);border-radius:var(--r-xl);box-shadow:var(--shadow-s)}
+.tbl summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:18px 22px;font:600 15px/1.2 Sora,sans-serif;letter-spacing:-.02em}
+.tbl summary::-webkit-details-marker{display:none}
+.tbl summary .s{font:500 12.5px/1.3 Manrope,sans-serif;color:var(--mute);letter-spacing:0}
+.tbl summary .pm{margin-left:auto;width:28px;height:28px;border-radius:50%;border:1px solid var(--line2);position:relative;flex:none}
+.tbl summary .pm::before,.tbl summary .pm::after{content:"";position:absolute;left:8px;right:8px;top:13px;height:1.6px;border-radius:1px;background:var(--ink);transition:transform .45s var(--ease-spr)}
+.tbl summary .pm::after{transform:rotate(90deg)}
+.tbl[open] summary .pm::after{transform:rotate(0)}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 22px 20px}
+.tw table{width:100%;min-width:980px;border-collapse:collapse}
+.tw th,.tw td{padding:10px 8px;border-top:1px solid var(--line);text-align:left;vertical-align:top;font:500 12.5px/1.4 Manrope,sans-serif;color:var(--ink2)}
+.tw thead th{border-top:0;font:600 10px/1.3 Sora,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);vertical-align:bottom}
+.tw td.num{font:600 12.5px/1.4 Sora,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink);text-align:right;white-space:nowrap;letter-spacing:-.01em}
+.tw thead th.num{text-align:right}
+.tw td.na{color:var(--mute);font-weight:400;font-family:Manrope,sans-serif}
+.tw tbody tr{cursor:pointer;transition:background .25s}
+.tw tbody tr:hover{background:var(--bg)}
+.tw tbody th{font:600 13px/1.35 Sora,sans-serif;color:var(--ink);letter-spacing:-.01em;white-space:nowrap}
+.tw tbody th svg{width:11px;height:11px;margin-right:7px;vertical-align:-1px}
+.tw .foot{font:500 12px/1.5 Manrope,sans-serif;color:var(--mute);margin:12px 0 0}
+
+@media (max-width:1040px){
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .info{position:relative;top:0}
+}
+@media (max-width:640px){
+  .wrap{padding:64px 16px 120px}
+  .head{margin-bottom:18px}
+  .lead{font-size:15px}
+  .mapc{padding:12px 8px 8px;border-radius:22px;margin:0 -4px}
+  .insight{padding:2px 6px 6px;gap:2px 14px}
+  .insight b{font-size:14px}
+  .toolbar{gap:10px}
+  .lvk{display:none}
+  .lv button{padding:0 11px;font-size:12px;height:32px}
+  .filters{gap:8px;margin-bottom:14px}
+  .chip{height:30px;font-size:12px}
+  .zone .zs{display:none}
+  .zone .zt{font-size:11px}
+  /* Info als Bottom-Sheet, solange eine Blase gewählt ist */
+  .info{position:fixed;left:10px;right:10px;bottom:10px;top:auto;z-index:40;max-height:56vh;overflow:auto;min-height:0;padding:18px 18px 16px;border-radius:22px;
+    box-shadow:0 30px 60px -20px rgba(20,24,40,.45),0 2px 10px rgba(20,24,40,.1);transform:translateY(calc(100% + 24px));transition:transform .5s var(--ease-spr);overscroll-behavior:contain}
+  .info.open{transform:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01s !important;animation-duration:.01s !important}
+}
+</style>
+</head>
+<body>
+<div class="badge"><i></i>Variante V1 · Landkarte</div>
+
+<main class="wrap">
+  <section aria-labelledby="h">
+    <p class="eyebrow">Vergleich · alle 13 Antriebe</p>
+    <div class="head">
+      <div>
+        <h2 id="h">Die Landkarte der Antriebe</h2>
+        <p class="lead" id="lead"></p>
+      </div>
+      <div class="ctl">
+        <span class="lvk">Verständnisstufe</span>
+        <div class="lv" id="lvSeg" role="radiogroup" aria-label="Verständnisstufe">
+          <span class="ind" aria-hidden="true"></span>
+          <button type="button" role="radio" data-v="1" aria-checked="false"><span class="st"><b class="f"></b><b></b><b></b></span>Einsteiger</button>
+          <button type="button" role="radio" data-v="2" aria-checked="true"><span class="st"><b class="f"></b><b class="f"></b><b></b></span>Fortgeschritten</button>
+          <button type="button" role="radio" data-v="3" aria-checked="false"><span class="st"><b class="f"></b><b class="f"></b><b class="f"></b></span>Experte</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="ctl"><span class="lvk">Bedingung</span>
+        <div class="lv" id="condSeg" role="radiogroup" aria-label="Betriebsbedingung">
+          <span class="ind" aria-hidden="true"></span>
+          <button type="button" role="radio" data-v="sl" aria-checked="false">Meereshöhe</button>
+          <button type="button" role="radio" data-v="vac" aria-checked="true">Vakuum</button>
+        </div>
+      </div>
+      <div class="ctl"><span class="lvk">Blasengröße</span>
+        <div class="lv" id="sizeSeg" role="radiogroup" aria-label="Blasengröße">
+          <span class="ind" aria-hidden="true"></span>
+          <button type="button" role="radio" data-v="eq" aria-checked="true">Gleich</button>
+          <button type="button" role="radio" data-v="pc" aria-checked="false">Kammerdruck</button>
+          <button type="button" role="radio" data-v="m" aria-checked="false">Masse</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="fg" id="famChips" role="group" aria-label="Familie filtern (zugleich Legende)"></div>
+      <div class="fg" id="useChips" role="group" aria-label="Nach Einsatz filtern"></div>
+    </div>
+
+    <div class="grid">
+      <div class="mapc">
+        <div class="insight" id="insight" aria-live="polite"></div>
+        <div id="chart"></div>
+        <p class="note" id="note"></p>
+      </div>
+      <aside class="info" id="info" aria-live="polite"><div class="info-in" id="infoIn"></div></aside>
+    </div>
+
+    <details class="tbl" id="tbl">
+      <summary><span>Alle Werte als Tabelle</span><span class="s">13 Triebwerke · Richtwerte</span><span class="pm" aria-hidden="true"></span></summary>
+      <div class="tw"><table id="tab"></table><p class="foot">Alle Werte gerundete Richtwerte (ca.). „k. A.“ = keine Angabe in den Daten (nicht sinnvoll oder nicht belegt). Masse = Trockenmasse. Zeile anklicken markiert das Triebwerk in der Karte.</p></div>
+    </details>
+  </section>
+</main>
+
+<script type="importmap">
+{ "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm" } }
+</script>
+<script type="module">
+import * as d3 from 'd3';
+
+/* ===================== Daten: docs/inhalt-triebwerke.md › Vergleichsdaten (13 Zeilen) =====================
+   Bereiche als [lo, hi], null = „–“ (keine Angabe). Einheiten: Schub kN, Isp s, Kammerdruck bar, Masse kg. */
+const R = (a, b = a) => [a, b];
+const DATA = [
+  { id:'srb', name:'Space-Shuttle-SRB', short:'Shuttle-SRB', typ:'Feststoff', fam:'fest', prop:'APCP (AP + Al + HTPB)', fSL:R(12000,14700), fV:null, iSL:R(242), iV:R(268), pc:62, m:null, re:'nein', th:'nein', use:'Booster', ready:'geflogen', note:'Schubverlauf über Kanalgeometrie; 1981–2011' },
+  { id:'merlin-1d', name:'Merlin 1D', short:'Merlin 1D', typ:'Gasgenerator', fam:'fluessig', prop:'RP-1 / LOX', fSL:R(845), fV:R(914), iSL:R(282), iV:R(311), pc:100, m:470, re:'ja', th:'ja', use:'Erststufe', ready:'fliegt', note:'regelbar bis ca. 40 %' },
+  { id:'raptor-2', name:'Raptor 2', short:'Raptor 2', typ:'Stufenverbrennung Full-Flow', fam:'fluessig', prop:'CH4 / LOX', fSL:R(2260), fV:null, iSL:R(327), iV:R(350), pc:300, m:1630, re:'ja', th:'ja', use:'Erststufe, Oberstufe', ready:'fliegt', note:'Starship-Testflüge; Vakuumvariante Isp ca. 380 s' },
+  { id:'rs-25', name:'RS-25', short:'RS-25', typ:'Stufenverbrennung brennstoffreich', fam:'fluessig', prop:'LH2 / LOX', fSL:R(1860), fV:R(2280), iSL:R(366), iV:R(452), pc:206, m:3180, re:'nein', th:'ja', use:'Erststufe', ready:'fliegt', note:'109 % Leistungsstufe; regelbar 67–109 %' },
+  { id:'nstar', name:'NSTAR (Dawn)', short:'NSTAR', typ:'Ionentriebwerk', fam:'elek', prop:'Xenon', fSL:null, fV:R(0.000092), iSL:null, iV:R(3100), pc:null, m:null, re:'ja', th:'ja', use:'Raumsonde', ready:'geflogen', note:'92 mN bei ca. 2.3 kW' },
+  { id:'rl10b-2', name:'RL10B-2', short:'RL10B-2', typ:'Expander', fam:'fluessig', prop:'LH2 / LOX', fSL:null, fV:R(110), iSL:null, iV:R(465), pc:44, m:300, re:'ja', th:'nein', use:'Oberstufe', ready:'fliegt', note:'RL10C-1: ca. 102 kN / 450 s; Serien-RL10 nicht regelbar' },
+  { id:'aj10-137', name:'AJ10-137 (Apollo SPS)', short:'AJ10-137', typ:'Druckgefördert, hypergol', fam:'fluessig', prop:'Aerozine 50 / N2O4', fSL:null, fV:R(91), iSL:null, iV:R(314), pc:7, m:null, re:'ja', th:'nein', use:'Raumschiff-Hauptantrieb', ready:'geflogen', note:'Draco: ca. 0.4 kN / ca. 300 s (MMH / N2O4), fliegt' },
+  { id:'rd-180', name:'RD-180', short:'RD-180', typ:'Stufenverbrennung oxidatorreich', fam:'fluessig', prop:'RP-1 / LOX', fSL:R(3830), fV:R(4150), iSL:R(311), iV:R(338), pc:267, m:5480, re:'nein', th:'ja', use:'Erststufe', ready:'fliegt', note:'Atlas V, auslaufend; regelbar 47–100 %' },
+  { id:'ss1-hybrid', name:'SpaceShipOne-Motor', short:'SpaceShipOne', typ:'Hybrid', fam:'sonder', prop:'HTPB / N2O', fSL:null, fV:R(74,88), iSL:null, iV:R(250), pc:null, m:null, re:'nein', th:'nein', use:'Suborbital', ready:'geflogen', note:'Schub/Isp ohne Bezugsdruck angegeben; 2004' },
+  { id:'mr-103', name:'Hydrazin-Düse 1-N-Klasse (MR-103)', short:'MR-103', typ:'Monergol', fam:'fluessig', prop:'Hydrazin (N2H4)', fSL:null, fV:R(0.0002,0.0011), iSL:null, iV:R(200,225), pc:null, m:0.33, re:'ja', th:'begrenzt', use:'Lageregelung', ready:'fliegt', note:'Schub sinkt mit Tankdruck (Blowdown)' },
+  { id:'coldgas-n2', name:'Kaltgas-Düse Stickstoff (z.B. MMU)', short:'Kaltgas N₂', typ:'Kaltgas', fam:'sonder', prop:'Stickstoff (N2)', fSL:null, fV:R(0.006), iSL:null, iV:R(73), pc:null, m:null, re:'ja', th:'nein', use:'Lageregelung', ready:'fliegt', note:'Isp theoretisch ca. 80 s; MMU-Düse ca. 6 N' },
+  { id:'nerva-xe', name:'NERVA XE Prime', short:'NERVA XE', typ:'Nuklear-thermisch', fam:'nuk', prop:'LH2 (Reaktorheizung)', fSL:null, fV:R(247), iSL:null, iV:R(825), pc:39, m:18100, re:'ja', th:null, use:'Oberstufe, interplanetar (geplant)', ready:'nur Prüfstand', note:'28 Starts am Prüfstand; Flugtriebwerk-Auslegung 850 s' },
+  { id:'xrs-2200', name:'XRS-2200 (X-33)', short:'XRS-2200', typ:'Aerospike-Düse (Gasgenerator)', fam:'sonder', prop:'LH2 / LOX', fSL:R(909), fV:R(1184), iSL:R(339), iV:R(439), pc:58, m:null, re:null, th:null, use:'Erststufe (geplant)', ready:'nur Prüfstand', note:'Düsenbauform, kein Zyklus' },
+];
+const FAM = {
+  fest:    { label:'Feststoff',  css:'--f-fest',     shape:'square' },
+  fluessig:{ label:'Flüssig',    css:'--f-fluessig', shape:'circle' },
+  sonder:  { label:'Sonderform', css:'--f-sonder',   shape:'diamond' },
+  elek:    { label:'Elektrisch', css:'--f-elek',     shape:'triangle' },
+  nuk:     { label:'Nuklear',    css:'--f-nuk',      shape:'hex' },
+};
+const FAM_ORDER = ['fest', 'fluessig', 'sonder', 'elek', 'nuk'];
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+for (const k of FAM_ORDER) FAM[k].color = cssv(FAM[k].css);
+const TRAY = cssv('--tray');
+
+/* Einsatz-Kategorien aus dem Freitext */
+const USE_CATS = ['Booster', 'Erststufe', 'Oberstufe', 'Raumschiff', 'Raumsonde', 'Interplanetar', 'Suborbital', 'Lageregelung'];
+function usesOf(s) {
+  const out = new Set();
+  for (const part of s.split(',')) {
+    const p = part.trim().toLowerCase();
+    if (p.startsWith('booster')) out.add('Booster');
+    if (p.startsWith('erststufe')) out.add('Erststufe');
+    if (p.startsWith('oberstufe')) out.add('Oberstufe');
+    if (p.startsWith('raumschiff')) out.add('Raumschiff');
+    if (p.startsWith('raumsonde')) out.add('Raumsonde');
+    if (p.startsWith('interplanetar')) out.add('Interplanetar');
+    if (p.startsWith('suborbital')) out.add('Suborbital');
+    if (p.startsWith('lageregelung')) out.add('Lageregelung');
+  }
+  return out;
+}
+DATA.forEach(d => { d.uses = usesOf(d.use); d.planned = /geplant/.test(d.use); });
+
+const G0 = 9.80665;
+const geo = r => Math.sqrt(r[0] * r[1]);
+
+/* ===================== Formatierung (de-DE, schmale Leerzeichen als Tausender) ===================== */
+const nfCache = {};
+function fmtN(v, sig = 3) {
+  const f = nfCache[sig] || (nfCache[sig] = new Intl.NumberFormat('de-DE', { maximumSignificantDigits: sig }));
+  return f.format(v).replace(/\./g, ' ');
+}
+const F_UNITS = [[1e6, 'MN'], [1e3, 'kN'], [1, 'N'], [1e-3, 'mN']];
+function fUnit(kN) { const N = kN * 1000; return F_UNITS.find(u => N >= u[0] * 0.9999) || F_UNITS[3]; }
+function fmtF(r) {
+  if (!r) return null;
+  const u = fUnit(r[1]);
+  const a = fmtN(r[0] * 1000 / u[0]), b = fmtN(r[1] * 1000 / u[0]);
+  return (r[0] === r[1] ? a : a + '–' + b) + ' ' + u[1];
+}
+function fmtFkN(r) { if (!r) return null; const a = fmtN(r[0], 4), b = fmtN(r[1], 4); return (r[0] === r[1] ? a : a + '–' + b) + ' kN'; }
+function fmtI(r) { if (!r) return null; return (r[0] === r[1] ? fmtN(r[0], 4) : fmtN(r[0], 4) + '–' + fmtN(r[1], 4)) + ' s'; }
+function fmtRatio(x) { return x >= 100 ? fmtN(x, 2) : x >= 10 ? fmtN(Math.round(x), 3) : fmtN(x, 2); }
+function ratioWords(x) {
+  if (x >= 1e6) return fmtN(x / 1e6, 2) + ' Millionen-mal';
+  if (x >= 1e4) return fmtN(x / 1e3, 2) + ' Tausend-mal';
+  return fmtRatio(x) + '-mal';
+}
+const SUP = { '-':'⁻', '0':'⁰', '1':'¹', '2':'²', '3':'³', '4':'⁴', '5':'⁵', '6':'⁶', '7':'⁷', '8':'⁸', '9':'⁹' };
+const pow10 = e => '10' + String(e).split('').map(c => SUP[c]).join('');
+
+/* ===================== Formen (gleiche Fläche ≈ Kreis mit Radius r) ===================== */
+function shapePath(s, r) {
+  r = Math.max(0, r);
+  if (s === 'circle') return `M${-r},0a${r},${r} 0 1,0 ${2 * r},0a${r},${r} 0 1,0 ${-2 * r},0Z`;
+  if (s === 'square') { const h = r * 0.886, c = Math.min(2.2, h * 0.3); return `M${-h + c},${-h}H${h - c}Q${h},${-h} ${h},${-h + c}V${h - c}Q${h},${h} ${h - c},${h}H${-h + c}Q${-h},${h} ${-h},${h - c}V${-h + c}Q${-h},${-h} ${-h + c},${-h}Z`; }
+  if (s === 'diamond') { const h = r * 1.253; return `M0,${-h}L${h},0L0,${h}L${-h},0Z`; }
+  if (s === 'triangle') { const a = r * 2.694, h = a * 0.866; return `M0,${(-h * 2 / 3).toFixed(2)}L${(a / 2).toFixed(2)},${(h / 3).toFixed(2)}L${(-a / 2).toFixed(2)},${(h / 3).toFixed(2)}Z`; }
+  if (s === 'hex') { const h = r * 1.1; let p = ''; for (let i = 0; i < 6; i++) { const t = Math.PI / 3 * i + Math.PI / 6; p += (i ? 'L' : 'M') + (h * Math.cos(t)).toFixed(2) + ',' + (h * Math.sin(t)).toFixed(2); } return p + 'Z'; }
+  return '';
+}
+function iconSvg(fam, size = 12) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const s = document.createElementNS(ns, 'svg');
+  s.setAttribute('viewBox', '-7 -7 14 14'); s.setAttribute('width', size); s.setAttribute('height', size); s.setAttribute('aria-hidden', 'true');
+  const p = document.createElementNS(ns, 'path'); p.setAttribute('d', shapePath(FAM[fam].shape, 5.4)); p.setAttribute('fill', FAM[fam].color);
+  s.appendChild(p); return s;
+}
+
+/* ===================== Texte je Verständnisstufe ===================== */
+const LEAD = {
+  1: 'Jede Form ist ein Triebwerk. Je weiter oben, desto mehr Kraft – je weiter rechts, desto sparsamer. Keines kann beides, darum hat jede Aufgabe ihr eigenes Triebwerk.',
+  2: 'Schub gegen spezifischen Impuls, beide Achsen logarithmisch: Zwischen Ionentriebwerk und Feststoff-Booster liegen rund acht Größenordnungen Schub.',
+  3: 'F über Isp (= vₑ,eff / g₀), jeweils am selben Betriebspunkt – Meereshöhe mit Meereshöhe, Vakuum mit Vakuum. Log-log; Bereiche als Balken, alle Werte gerundete Richtwerte.',
+};
+const AX = {
+  1: { x:'Sparsamkeit → (spezifischer Impuls in Sekunden)', y:'↑ Kraft (Schub) – jede Linie = 10× mehr' },
+  2: { x:'Spezifischer Impuls Isp [s] · logarithmisch', y:'↑ Schub F · logarithmisch' },
+  3: { x:'Isp = vₑ,eff / g₀ [s] · logarithmisch (darunter vₑ = Isp · g₀)', y:'↑ F [kN] · Zehnerpotenzen' },
+};
+/* Zonen in Datenkoordinaten (Isp [s], Schub [kN]); Label-Ecke: 'tl' oben links, 'bl' unten links */
+const ZONES = [
+  { id:'start', x:[55, 480], y:[300, 4e4], at:'tl',
+    t:{ 1:['Viel Kraft, großer Durst', 'Zum Abheben vom Boden'], 2:['Hoher Schub, mäßiger Isp', 'Erststufen & Booster: Schub > Gewicht'], 3:['Start: T/W > 1 nötig', 'Es zählt der Schub auf Meereshöhe (F6)'] } },
+  { id:'ober', x:[420, 1000], y:[10, 1000], at:'bl',
+    t:{ 1:['Sparsam mit guter Kraft', 'Für Oberstufen im Weltall'], 2:['Hoher Isp, mittlerer Schub', 'Oberstufen: Wasserstoff & nuklear'], 3:['Isp ca. 450–850 s', 'Kleine Molmasse (H₂) → hohes vₑ (F7)'] } },
+  { id:'reise', x:[1000, 5000], y:[3e-5, 0.03], at:'tl',
+    t:{ 1:['Hauchzart, extrem sparsam', 'Für lange Reisen im All'], 2:['Winziger Schub, sehr hoher Isp', 'Elektrisch: monatelang schieben'], 3:['vₑ ca. 30 km/s', 'ṁ nur ca. 3 mg/s (NSTAR, F4)'] } },
+  { id:'lage', x:[55, 260], y:[3e-5, 0.03], at:'bl',
+    t:{ 1:['Winzige Stöße', 'Zum Drehen und Ausrichten'], 2:['Newton-Bereich, Isp < 250 s', 'Lageregelung: einfach & zuverlässig'], 3:['F ca. 0,2–6 N', 'Einfachheit vor Effizienz'] } },
+];
+const COND_L = { sl:'Meereshöhe', vac:'Vakuum' };
+
+/* ===================== Zustand ===================== */
+const S = { lvl:2, cond:'vac', size:'eq', fams:new Set(FAM_ORDER), use:'alle', hover:null, pins:[], intro:false };
+const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+
+/* ===================== Segment-Umschalter ===================== */
+function seg(el, get, set) {
+  const ind = el.querySelector('.ind'), btns = [...el.querySelectorAll('button')];
+  const sync = () => {
+    const v = String(get()); let on = null;
+    btns.forEach(b => { const a = b.dataset.v === v; b.setAttribute('aria-checked', a); b.tabIndex = a ? 0 : -1; if (a) on = b; });
+    if (on) { ind.style.width = on.offsetWidth + 'px'; ind.style.transform = `translateX(${on.offsetLeft}px)`; }
+  };
+  btns.forEach((b, i) => {
+    b.addEventListener('click', () => { set(b.dataset.v); sync(); });
+    b.addEventListener('keydown', e => {
+      const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0; if (!d) return;
+      e.preventDefault(); const n = btns[(i + d + btns.length) % btns.length]; n.focus(); n.click();
+    });
+  });
+  // erste Positionierung ohne Animation
+  ind.style.transition = 'none'; sync(); requestAnimationFrame(() => { ind.style.transition = ''; });
+  return sync;
+}
+const segSyncs = [
+  seg(document.getElementById('lvSeg'), () => S.lvl, v => setLevel(+v)),
+  seg(document.getElementById('condSeg'), () => S.cond, v => setCond(v)),
+  seg(document.getElementById('sizeSeg'), () => S.size, v => { if (S.size !== v) { S.size = v; update(true); } }),
+];
+document.fonts && document.fonts.ready.then(() => segSyncs.forEach(f => f()));
+
+/* ===================== Filter-Chips (zugleich Legende) ===================== */
+const famWrap = document.getElementById('famChips'), useWrap = document.getElementById('useChips');
+const famBtns = {};
+for (const k of FAM_ORDER) {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.setAttribute('aria-pressed', 'true');
+  b.appendChild(iconSvg(k));
+  const t = document.createElement('span'); t.textContent = FAM[k].label; b.appendChild(t);
+  const n = document.createElement('span'); n.className = 'n'; n.textContent = DATA.filter(d => d.fam === k).length; b.appendChild(n);
+  b.addEventListener('click', () => {
+    if (S.fams.has(k)) S.fams.delete(k); else S.fams.add(k);
+    if (!S.fams.size) FAM_ORDER.forEach(f => S.fams.add(f));   // nie leer
+    syncChips(); update(true);
+  });
+  famBtns[k] = b; famWrap.appendChild(b);
+}
+const useBtns = {};
+for (const u of ['alle', ...USE_CATS]) {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'chip use';
+  const t = document.createElement('span'); t.textContent = u === 'alle' ? 'Jeder Einsatz' : u; b.appendChild(t);
+  if (u !== 'alle') { const n = document.createElement('span'); n.className = 'n'; n.textContent = DATA.filter(d => d.uses.has(u)).length; b.appendChild(n); }
+  b.addEventListener('click', () => { S.use = (S.use === u && u !== 'alle') ? 'alle' : u; syncChips(); update(true); });
+  useBtns[u] = b; useWrap.appendChild(b);
+}
+function syncChips() {
+  for (const k of FAM_ORDER) famBtns[k].setAttribute('aria-pressed', S.fams.has(k));
+  for (const u in useBtns) useBtns[u].setAttribute('aria-pressed', S.use === u);
+}
+syncChips();
+const passes = d => S.fams.has(d.fam) && (S.use === 'alle' || d.uses.has(S.use));
+
+/* ===================== SVG-Gerüst ===================== */
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const chart = document.getElementById('chart');
+const svg = el('svg', { role:'group', 'aria-label':'Blasendiagramm: Schub gegen spezifischen Impuls, 13 Triebwerke' }, chart);
+const gZones = el('g', { class:'zones', opacity:0 }, svg);
+const gGrid = el('g', {}, svg);
+const gAxes = el('g', {}, svg);
+const gTray = el('g', {}, svg);
+const gGuides = el('g', { class:'fade', opacity:0 }, svg);
+const gLink = el('g', { class:'fade', opacity:0 }, svg);
+const gNodes = el('g', {}, svg);
+const gLabels = el('g', {}, svg);
+const gPills = el('g', { class:'fade', opacity:0 }, svg);
+
+/* Messen für Label-Platzierung (einmal je Zustand, nie pro Frame) */
+const mctx = document.createElement('canvas').getContext('2d');
+function textW(s, font = '600 12px Manrope') { mctx.font = font; return mctx.measureText(s).width; }
+
+/* ===================== Federn ===================== */
+const K = 170, DAMP = 2 * Math.sqrt(K) * 0.86;
+const spr = v => ({ v, t:v, vel:0 });
+function stepSpr(s, dt) {
+  const a = K * (s.t - s.v) - DAMP * s.vel; s.vel += a * dt; s.v += s.vel * dt;
+  if (Math.abs(s.t - s.v) < 0.02 && Math.abs(s.vel) < 0.02) { s.v = s.t; s.vel = 0; return false; }
+  return true;
+}
+const KEYS = ['x', 'y', 'r', 'o', 'lx', 'ly', 'la', 'rx1', 'rx2', 'ry1', 'ry2'];
+
+/* ===================== Knoten ===================== */
+const NODES = DATA.map((d, i) => {
+  const g = el('g', { class:'nd', tabindex:0, role:'button' }, gNodes);
+  const rgx = el('line', { class:'rg' }, g), rgy = el('line', { class:'rg' }, g);
+  const pr = el('circle', { class:'pr' }, g);
+  const mk = el('path', { class:'mk' }, g);
+  const hit = el('circle', { class:'hit' }, g);
+  const lb = el('text', { class:'lb', dy:'0.35em' }, gLabels);
+  const n = { d, i, g, rgx, rgy, pr, mk, hit, lb, s:{}, pend:null, plotted:false, vis:true, labelOff:null };
+  KEYS.forEach(k => n.s[k] = spr(0));
+  g.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') setHover(n.d.id); });
+  g.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') setHover(null); });
+  g.addEventListener('focus', () => setHover(n.d.id));
+  g.addEventListener('blur', () => setHover(null));
+  g.addEventListener('click', () => pick(n.d.id));
+  g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(n.d.id); } });
+  return n;
+});
+const byId = Object.fromEntries(NODES.map(n => [n.d.id, n]));
+
+/* ===================== Layout & Skalen ===================== */
+const L = {};
+const X_TICKS = [50, 100, 200, 500, 1000, 2000, 5000];
+const Y_DEC = [-4, -3, -2, -1, 0, 1, 2, 3, 4];
+function fTick(e) { const kN = Math.pow(10, e); return fmtF(R(kN)); }
+function layout() {
+  const W = Math.max(300, chart.clientWidth);
+  const narrow = W < 600;
+  const M = { l: narrow ? 52 : 70, r: narrow ? 14 : 22, t: 34, b: 62 };
+  const pw = W - M.l - M.r;
+  const ph = narrow ? Math.round(Math.min(pw * 1.55, 560)) : Math.round(Math.max(400, Math.min(pw * 0.62, 580)));
+  const itemW = narrow ? Math.floor(pw / 4) : Math.max(96, Math.min(112, Math.floor(pw / 7)));
+  const cap = Math.max(1, Math.floor((pw + 8) / itemW));
+  const maxTray = Math.max(...['sl', 'vac'].map(c => DATA.filter(d => !(c === 'sl' ? d.fSL && d.iSL : d.fV && d.iV)).length));
+  const rows = Math.ceil(maxTray / cap);
+  const trayY = M.t + ph + M.b;
+  const rowH = narrow ? 44 : 50;
+  const H = trayY + 30 + rows * rowH + 6;
+  Object.assign(L, { W, H, M, pw, ph, narrow, itemW, cap, trayY, rowH,
+    x: d3.scaleLog().domain([50, 5000]).range([M.l, M.l + pw]),
+    y: d3.scaleLog().domain([3e-5, 4e4]).range([M.t + ph, M.t]),
+    R0: narrow ? 7 : 8,
+    rPc: d3.scaleSqrt().domain([0, 300]).range([0, narrow ? 18 : 22]),
+    rM: d3.scaleSqrt().domain([0, 18100]).range([0, narrow ? 20 : 25]),
+  });
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('height', H);
+  buildAxes(); buildZones(); buildTray();
+}
+
+/* Achsen: einmal bauen, Positionen über drawAxes(u) – u = Aufklapp-Fortschritt 0…1 */
+let AXEL = { xs:[], ys:[] };
+function buildAxes() {
+  gGrid.textContent = ''; gAxes.textContent = '';
+  const { M, pw, ph, x, y, narrow } = L, lvl = S.lvl;
+  AXEL = { xs:[], ys:[] };
+  for (const t of X_TICKS) {
+    const ln = el('line', { class:'grid-l', y1:M.t, y2:M.t + ph }, gGrid);
+    const tx = el('text', { class:'tk', y:M.t + ph + 18, 'text-anchor':'middle' }, gAxes);
+    tx.textContent = narrow ? fmtN(t, 4) : fmtN(t, 4) + ' s';
+    let t2 = null;
+    if (lvl === 3 && (!narrow || t === 100 || t === 1000)) {
+      t2 = el('text', { class:'tk2', y:M.t + ph + 32, 'text-anchor':'middle' }, gAxes);
+      t2.textContent = fmtN(t * G0 / 1000, 2) + ' km/s';
+    }
+    AXEL.xs.push({ p:x(t), ln, tx, t2 });
+  }
+  for (const e of Y_DEC) {
+    const ln = el('line', { class:'grid-l', x1:M.l, x2:M.l + pw }, gGrid);
+    const tx = el('text', { class:'tk', x:M.l - 10, 'text-anchor':'end', dy:'0.35em' }, gAxes);
+    tx.textContent = lvl === 3 ? pow10(e) : fTick(e);
+    AXEL.ys.push({ p:y(Math.pow(10, e)), ln, tx });
+  }
+  el('line', { class:'axis-l', x1:M.l, x2:M.l + pw, y1:M.t + ph + .5, y2:M.t + ph + .5 }, gAxes);
+  el('line', { class:'axis-l', x1:M.l - .5, x2:M.l - .5, y1:M.t, y2:M.t + ph }, gAxes);
+  const yt = el('text', { class:'ax-t', x:M.l - (narrow ? 44 : 60), y:M.t - 16 }, gAxes); yt.textContent = AX[lvl].y;
+  const xt = el('text', { class:'ax-t', x:M.l + pw, y:M.t + ph + (lvl === 3 ? 52 : 40), 'text-anchor':'end' }, gAxes);
+  xt.textContent = narrow && lvl === 3 ? 'Isp = vₑ,eff / g₀ [s] · log' : AX[lvl].x;
+  drawAxes(S.intro ? 1 : axU);
+}
+let axU = 0;
+function drawAxes(u) {
+  const { M, pw, ph } = L, cx = M.l + pw / 2, cy = M.t + ph / 2;
+  for (const a of AXEL.xs) {
+    const p = cx + (a.p - cx) * u;
+    a.ln.setAttribute('x1', p); a.ln.setAttribute('x2', p); a.tx.setAttribute('x', p); a.tx.setAttribute('opacity', u);
+    if (a.t2) { a.t2.setAttribute('x', p); a.t2.setAttribute('opacity', u * .8); }
+  }
+  for (const a of AXEL.ys) {
+    const p = cy + (a.p - cy) * u;
+    a.ln.setAttribute('y1', p); a.ln.setAttribute('y2', p); a.tx.setAttribute('y', p); a.tx.setAttribute('opacity', u);
+  }
+}
+let ZBOX = [];
+function buildZones() {
+  gZones.textContent = ''; ZBOX = [];
+  const { x, y, narrow } = L;
+  for (const z of ZONES) {
+    const g = el('g', { class:'zone' }, gZones);
+    const x0 = x(z.x[0]), x1 = x(z.x[1]), y0 = y(z.y[1]), y1 = y(z.y[0]);
+    el('rect', { x:x0, y:y0, width:x1 - x0, height:y1 - y0, rx:16 }, g);
+    const [t, s] = z.t[S.lvl];
+    const ty = z.at === 'tl' ? y0 + 18 : y1 - (narrow ? 10 : 26);
+    const tw = textW(t, `600 ${narrow ? 11 : 12.5}px Sora`);
+    let h = 14, w = tw;
+    if (!narrow) { w = Math.max(tw, textW(s, '500 11px Manrope')); h = 30; }
+    // passt der Text nicht bis zum rechten Plotrand, rechtsbündig setzen (ragt dann nach links ins Leere)
+    const right = x0 + 10 + w > L.M.l + L.pw - 6;
+    const tx = right ? Math.min(x1, L.M.l + L.pw) - 10 : x0 + 10;
+    const anchor = right ? 'end' : 'start';
+    const tg = el('g', { class:'ztxt' }, g);
+    const a = el('text', { class:'zt', x:tx, y:ty, 'text-anchor':anchor }, tg); a.textContent = t;
+    if (!narrow) { const b = el('text', { class:'zs', x:tx, y:ty + 15, 'text-anchor':anchor }, tg); b.textContent = s; }
+    const bx = right ? tx - w : tx;
+    ZBOX.push({ x:bx - 2, y:ty - 12, w:w + 4, h });
+  }
+}
+function buildTray() {
+  gTray.textContent = '';
+  const { M, pw, trayY } = L;
+  el('rect', { class:'tray-bg', x:M.l - 8, y:trayY - 8, width:pw + 16, height:L.H - trayY + 4, rx:16 }, gTray);
+  trayTitle = el('text', { class:'tray-t', x:M.l + 4, y:trayY + 12 }, gTray);
+  syncTrayTitle();
+}
+let trayTitle = null;
+function syncTrayTitle() {
+  if (!trayTitle) return;
+  const n = DATA.filter(d => !hasPoint(d)).length;
+  trayTitle.textContent = L.narrow ? `Ohne Wert · ${COND_L[S.cond]} (${n})` : `Ohne Wert bei ${COND_L[S.cond]} – keine Angabe in den Daten (${n})`;
+}
+function trayPos(k) {
+  const { M, itemW, cap, trayY, rowH } = L;
+  const row = Math.floor(k / cap), col = k % cap;
+  return [M.l + itemW / 2 - 6 + col * itemW, trayY + 36 + row * rowH];
+}
+
+/* ===================== Werte je Bedingung ===================== */
+const fOf = (d, c = S.cond) => c === 'sl' ? d.fSL : d.fV;
+const iOf = (d, c = S.cond) => c === 'sl' ? d.iSL : d.iV;
+const hasPoint = (d, c = S.cond) => !!(fOf(d, c) && iOf(d, c));
+function sizeVal(d) { return S.size === 'pc' ? d.pc : S.size === 'm' ? d.m : null; }
+
+/* ===================== Ziele berechnen + Labels platzieren ===================== */
+function computeTargets() {
+  const { x, y, R0 } = L;
+  let trayK = 0;
+  for (const n of NODES) {
+    const d = n.d, F = fOf(d), I = iOf(d);
+    n.plotted = !!(F && I); n.vis = passes(d);
+    const T = {};
+    const sv = sizeVal(d);
+    n.hollow = S.size !== 'eq' && sv == null;
+    let r = R0;
+    if (S.size === 'pc' && sv != null) r = Math.max(4, L.rPc(sv));
+    if (S.size === 'm' && sv != null) r = Math.max(4, L.rM(sv));
+    if (n.hollow) r = R0 * 0.85;
+    if (n.plotted) {
+      T.x = x(geo(I)); T.y = y(geo(F));
+      T.rx1 = x(I[0]) - T.x; T.rx2 = x(I[1]) - T.x; T.ry1 = y(F[0]) - T.y; T.ry2 = y(F[1]) - T.y;
+      T.r = r;
+    } else {
+      [T.x, T.y] = trayPos(trayK++);
+      T.rx1 = T.rx2 = T.ry1 = T.ry2 = 0;
+      T.r = R0 * 0.85;
+    }
+    T.o = n.vis ? 1 : 0.1;
+    if (!n.vis) T.r *= 0.7;
+    n.T = T;
+    // Farben (CSS-Transition übernimmt das Überblenden)
+    const col = FAM[d.fam].color;
+    const fill = !n.plotted ? TRAY : n.hollow ? '#ffffff' : col;
+    const stroke = !n.plotted ? col : n.hollow ? col : '#ffffff';
+    n.mk.style.fill = fill; n.mk.style.stroke = stroke;
+    n.mk.style.strokeWidth = (n.hollow || !n.plotted) ? '1.6px' : '2px';
+    n.rgx.style.stroke = col; n.rgy.style.stroke = col;
+    n.g.style.pointerEvents = n.vis ? '' : 'none';
+    n.g.tabIndex = n.vis ? 0 : -1;
+    n.g.setAttribute('aria-label', ariaFor(d));
+  }
+  placeLabels();
+}
+function ariaFor(d) {
+  const F = fOf(d), I = iOf(d), c = COND_L[S.cond];
+  return `${d.name}, ${FAM[d.fam].label}. ${c}: Schub ${F ? fmtF(F) : 'keine Angabe'}, Isp ${I ? fmtI(I) : 'keine Angabe'}.`;
+}
+function labelText(n) { return n.plotted ? n.d.short : n.d.short; }
+function placeLabels() {
+  const { M, pw, ph } = L;
+  const boxes = [];
+  const H = 14;
+  const vis = NODES.filter(n => n.vis && n.plotted);
+  const nodeBoxes = vis.map(n => ({ x:n.T.x - n.T.r - 2, y:n.T.y - n.T.r - 2, w:2 * n.T.r + 4, h:2 * n.T.r + 4, id:n.d.id }));
+  const hit = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  const inside = b => b.x >= M.l + 2 && b.x + b.w <= M.l + pw - 2 && b.y >= M.t + 2 && b.y + b.h <= M.t + ph - 2;
+  // Reihenfolge: dichte Gruppen zuerst nach Schub absteigend, damit Platzierung stabil bleibt
+  const order = vis.slice().sort((a, b) => a.T.y - b.T.y || a.T.x - b.T.x);
+  for (const n of NODES) {
+    const trayNarrow = !n.plotted && L.narrow;
+    n.lb.classList.toggle('tr', trayNarrow);
+    n.labelOff = null; n.lw = textW(labelText(n), trayNarrow ? '600 10.5px Manrope' : '600 12px Manrope');
+  }
+  for (const pass of [0, 1]) {
+    for (const n of order) {
+      if (n.labelOff) continue;
+      const w = n.lw, r = n.T.r, X = n.T.x, Y = n.T.y;
+      const rangeX = Math.max(Math.abs(n.T.rx1), Math.abs(n.T.rx2));
+      const rr = Math.max(r, rangeX);
+      const cands = [
+        [rr + 6, 0], [-rr - 6 - w, 0], [-w / 2, -r - 11], [-w / 2, r + 12],
+        [r * .75 + 4, -r * .75 - 9], [r * .75 + 4, r * .75 + 9], [-r * .75 - 4 - w, -r * .75 - 9], [-r * .75 - 4 - w, r * .75 + 9],
+      ];
+      for (const [ox, oy] of cands) {
+        const b = { x:X + ox, y:Y + oy - H / 2, w, h:H };
+        if (!inside(b)) continue;
+        if (boxes.some(o => hit(b, o))) continue;
+        if (nodeBoxes.some(o => o.id !== n.d.id && hit(b, o))) continue;
+        if (pass === 0 && ZBOX.some(o => hit(b, o))) continue;
+        n.labelOff = [ox, oy]; boxes.push(b); break;
+      }
+    }
+  }
+  for (const n of NODES) {
+    const T = n.T;
+    if (!n.plotted) { T.lx = -n.lw / 2; T.ly = T.r + 13; T.la = n.vis ? 1 : 0; continue; }
+    if (n.labelOff) { [T.lx, T.ly] = n.labelOff; T.la = n.vis ? 1 : 0; }
+    else { T.lx = T.r + 6; T.ly = 0; T.la = 0; n.forceable = true; }
+  }
+}
+
+/* Ziele anwenden (mit Staffelung) */
+function applyTargets(stagger = 0, order = null, snap = false) {
+  const now = performance.now();
+  const list = order || NODES;
+  list.forEach((n, k) => {
+    if (snap) { KEYS.forEach(key => { n.s[key].t = n.s[key].v = n.T[key]; n.s[key].vel = 0; }); n.pend = null; return; }
+    const at = now + k * stagger;
+    // Label-Deckkraft sofort (nicht gestaffelt), Rest gestaffelt
+    n.pend = { at, T:n.T };
+  });
+  kick();
+}
+
+/* ===================== Render-Schleife (läuft nur bei Bewegung) ===================== */
+let raf = 0, last = 0, introT0 = 0;
+function kick() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); } }
+function loop(now) {
+  const dt = Math.min(0.034, (now - last) / 1000); last = now;
+  let active = false;
+  if (introT0 && axU < 1) {
+    const t = Math.min(1, (now - introT0) / 1200);
+    axU = 1 - Math.pow(1 - t, 3.2); drawAxes(axU); active = true;
+    if (t >= 1) { axU = 1; drawAxes(1); }
+  }
+  for (const n of NODES) {
+    if (n.pend) {
+      if (now >= n.pend.at) { KEYS.forEach(k => n.s[k].t = n.pend.T[k]); n.pend = null; }
+      active = true;
+    }
+    for (const k of KEYS) if (stepSpr(n.s[k], dt)) active = true;
+    renderNode(n);
+  }
+  renderOverlay();
+  if (active) raf = requestAnimationFrame(loop); else raf = 0;
+}
+const hlId = () => S.hover;
+function renderNode(n) {
+  const s = n.s, x = s.x.v, y = s.y.v, r = Math.max(0, s.r.v), o = Math.max(0, Math.min(1, s.o.v));
+  n.g.setAttribute('transform', `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+  n.g.style.opacity = o;
+  n.mk.setAttribute('d', shapePath(FAM[n.d.fam].shape, r));
+  n.hit.setAttribute('r', Math.max(14, r + 6));
+  n.pr.setAttribute('r', r + 5.5);
+  n.rgx.setAttribute('x1', s.rx1.v); n.rgx.setAttribute('x2', s.rx2.v); n.rgx.setAttribute('y1', 0); n.rgx.setAttribute('y2', 0);
+  n.rgy.setAttribute('y1', s.ry1.v); n.rgy.setAttribute('y2', s.ry2.v); n.rgy.setAttribute('x1', 0); n.rgy.setAttribute('x2', 0);
+  const force = (S.hover === n.d.id || S.pins.includes(n.d.id)) && n.vis;
+  const la = Math.max(0, Math.min(1, force ? 1 : s.la.v)) * o;
+  n.lb.setAttribute('transform', `translate(${(x + s.lx.v).toFixed(1)},${(y + s.ly.v).toFixed(1)})`);
+  n.lb.setAttribute('opacity', la.toFixed(3));
+}
+function setText(node, s) { if (node.textContent !== s) node.textContent = s; }
+function buildLabels() {
+  for (const n of NODES) {
+    n.lb.textContent = '';
+    n.lb.appendChild(document.createTextNode(n.d.short));
+  }
+}
+
+/* Hilfslinien + Verbindungslinie im Vergleich */
+const gl = { v:el('line', { class:'guide' }, gGuides), h:el('line', { class:'guide' }, gGuides) };
+function pill(parent, cls) {
+  const g = el('g', { class:cls }, parent);
+  const r = el('rect', { rx:9, height:20 }, g); const t = el('text', { dy:'0.35em' }, g);
+  return { g, r, t, w:0, set(s) { if (t.textContent !== s) { t.textContent = s; this.w = textW(s, '600 11.5px Sora') + 16; r.setAttribute('width', this.w); } } };
+}
+const px = pill(gPills, 'pill'), py = pill(gPills, 'pill');
+const linkLine = el('line', { class:'link' }, gLink);
+const lpill = pill(gLink, 'lpill');
+function renderOverlay() {
+  const { M, ph } = L;
+  const h = S.hover && byId[S.hover];
+  if (h && h.plotted && h.vis) {
+    const x = h.s.x.v, y = h.s.y.v, r = h.s.r.v;
+    gl.v.setAttribute('x1', x); gl.v.setAttribute('x2', x); gl.v.setAttribute('y1', y + r + 3); gl.v.setAttribute('y2', M.t + ph);
+    gl.h.setAttribute('y1', y); gl.h.setAttribute('y2', y); gl.h.setAttribute('x1', M.l); gl.h.setAttribute('x2', x - r - 3);
+    px.set(fmtI(iOf(h.d))); py.set(fmtF(fOf(h.d)));
+    px.g.setAttribute('transform', `translate(${(x - px.w / 2).toFixed(1)},${M.t + ph + 6})`);
+    px.r.setAttribute('y', -2); px.t.setAttribute('x', 8); px.t.setAttribute('y', 8);
+    py.g.setAttribute('transform', `translate(${(M.l - py.w - 4).toFixed(1)},${(y - 10).toFixed(1)})`);
+    py.t.setAttribute('x', 8); py.t.setAttribute('y', 10);
+    gGuides.setAttribute('opacity', 1); gPills.setAttribute('opacity', 1);
+  } else { gGuides.setAttribute('opacity', 0); gPills.setAttribute('opacity', 0); }
+  if (S.pins.length === 2) {
+    const [a, b] = S.pins.map(id => byId[id]);
+    if (a.plotted && b.plotted && a.vis && b.vis) {
+      const x1 = a.s.x.v, y1 = a.s.y.v, x2 = b.s.x.v, y2 = b.s.y.v;
+      linkLine.setAttribute('x1', x1); linkLine.setAttribute('y1', y1); linkLine.setAttribute('x2', x2); linkLine.setAttribute('y2', y2);
+      const c = cmpRatios(a.d, b.d);
+      lpill.set(c.short);
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      const lx = Math.max(L.M.l, Math.min(L.M.l + L.pw - lpill.w, mx - lpill.w / 2));
+      lpill.g.setAttribute('transform', `translate(${lx.toFixed(1)},${(my - 10).toFixed(1)})`);
+      lpill.t.setAttribute('x', 8); lpill.t.setAttribute('y', 10);
+      gLink.setAttribute('opacity', 1);
+    } else gLink.setAttribute('opacity', 0);
+  } else gLink.setAttribute('opacity', 0);
+}
+
+/* ===================== Vergleich ===================== */
+function cmpRatios(a, b) {
+  const Fa = fOf(a), Fb = fOf(b), Ia = iOf(a), Ib = iOf(b);
+  const out = { f:null, i:null, short:'' };
+  if (Fa && Fb) { const ga = geo(Fa), gb = geo(Fb); out.f = ga >= gb ? { win:a, lose:b, x:ga / gb } : { win:b, lose:a, x:gb / ga }; }
+  if (Ia && Ib) { const ga = geo(Ia), gb = geo(Ib); out.i = ga >= gb ? { win:a, lose:b, x:ga / gb } : { win:b, lose:a, x:gb / ga }; }
+  const p = [];
+  if (out.f) p.push(`Schub ${fmtRatio(out.f.x)}×`);
+  if (out.i) p.push(`Isp ${fmtRatio(out.i.x)}×`);
+  out.short = p.join(' · ');
+  return out;
+}
+
+/* ===================== Interaktion ===================== */
+let hoverTimer = 0;
+function setHover(id) {
+  clearTimeout(hoverTimer);
+  if (id === null) { hoverTimer = setTimeout(() => { S.hover = null; syncHL(); renderInfo(); kickOnce(); }, 110); return; }
+  if (S.hover === id) return;
+  S.hover = id; syncHL(); renderInfo(); kickOnce();
+}
+function kickOnce() { if (!raf) { NODES.forEach(renderNode); renderOverlay(); } }
+function pick(id) {
+  clearTimeout(hoverTimer);
+  const p = S.pins;
+  if (p.length === 1 && p[0] === id) S.pins = [];
+  else if (p.length === 2 && p.includes(id)) S.pins = p.filter(x => x !== id);
+  else if (p.length === 1) S.pins = [p[0], id];
+  else S.pins = [id];
+  syncHL(); renderInfo(); kickOnce();
+}
+function syncHL() {
+  const any = !!S.hover || S.pins.length > 0;
+  svg.classList.toggle('hl-on', any);
+  for (const n of NODES) {
+    const h = S.hover === n.d.id, p = S.pins.includes(n.d.id);
+    n.g.classList.toggle('is-hl', h); n.g.classList.toggle('pin', p);
+    n.lb.classList.toggle('is-hl', h); n.lb.classList.toggle('pin', p);
+    n.g.setAttribute('aria-pressed', p);
+  }
+  document.querySelectorAll('#tab tbody tr').forEach(tr => tr.style.background = S.pins.includes(tr.dataset.id) ? 'var(--bg)' : '');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && (S.pins.length || S.hover)) { S.pins = []; S.hover = null; syncHL(); renderInfo(); kickOnce(); } });
+svg.addEventListener('click', e => { if (e.target === svg || e.target.closest('.zone') || e.target.classList.contains('grid-l')) { if (S.pins.length) { S.pins = []; syncHL(); renderInfo(); kickOnce(); } } });
+
+/* ===================== Info-Karte ===================== */
+const info = document.getElementById('info'), infoIn = document.getElementById('infoIn');
+const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+function kv(parent, k, v) {
+  const r = h('div', 'spec'); r.appendChild(h('span', null, k));
+  const b = h('b', v == null ? 'na' : null, v == null ? 'keine Angabe' : v); r.appendChild(b); parent.appendChild(r);
+}
+function ready(d) {
+  const t = h('span', 'tagr' + (d.ready === 'nur Prüfstand' ? ' test' : '')); t.appendChild(h('i')); t.appendChild(document.createTextNode(d.ready)); return t;
+}
+function yn(v) { return v == null ? null : v; }
+function cardEngine(d, hint) {
+  const f = document.createDocumentFragment(), lvl = S.lvl, c = COND_L[S.cond];
+  const k = h('p', 'i-k'); k.appendChild(document.createTextNode(S.pins.includes(d.id) ? 'Fixiert · ' + c : c));
+  if (S.pins.includes(d.id)) { const x = h('button', 'x', 'Lösen'); x.type = 'button'; x.addEventListener('click', () => pick(d.id)); k.appendChild(x); }
+  f.appendChild(k);
+  const hd = h('div', 'i-h'); hd.appendChild(iconSvg(d.fam, 16)); hd.appendChild(h('h3', 'i-n', d.name)); f.appendChild(hd);
+  f.appendChild(h('p', 'i-t', `${d.typ} · ${FAM[d.fam].label}`));
+  const F = fOf(d), I = iOf(d);
+  const kp = h('div', 'kpis');
+  const k1 = h('div', 'kpi'); k1.appendChild(h('b', F ? null : 'na', F ? (lvl === 3 ? fmtFkN(F) : fmtF(F)) : 'keine Angabe')); k1.appendChild(h('span', null, lvl === 1 ? 'Kraft (Schub)' : 'Schub · ' + c));
+  const k2 = h('div', 'kpi'); k2.appendChild(h('b', I ? null : 'na', I ? fmtI(I) : 'keine Angabe')); k2.appendChild(h('span', null, lvl === 1 ? 'Sparsamkeit (Isp)' : 'Isp · ' + c));
+  kp.appendChild(k1); kp.appendChild(k2); f.appendChild(kp);
+  const sp = h('div');
+  kv(sp, 'Treibstoffe', d.prop);
+  kv(sp, 'Einsatz', d.use);
+  const rr = h('div', 'spec'); rr.appendChild(h('span', null, 'Reifegrad')); const rb = h('b'); rb.appendChild(ready(d)); rr.appendChild(rb); sp.appendChild(rr);
+  if (lvl >= 2) {
+    kv(sp, 'Kammerdruck', d.pc != null ? fmtN(d.pc) + ' bar' : null);
+    kv(sp, 'Masse (trocken)', d.m != null ? fmtN(d.m, 4) + ' kg' : null);
+    kv(sp, 'Wiederzündbar · regelbar', `${yn(d.re) ?? 'k. A.'} · ${yn(d.th) ?? 'k. A.'}`);
+  }
+  f.appendChild(sp);
+  if (lvl === 3) {
+    const t = h('table', 'mt');
+    const th = h('thead'); const tr0 = h('tr'); tr0.appendChild(h('th', null, '')); tr0.appendChild(h('th', null, 'Meereshöhe')); tr0.appendChild(h('th', null, 'Vakuum')); th.appendChild(tr0); t.appendChild(th);
+    const tb = h('tbody');
+    const row = (lab, a, b) => { const tr = h('tr'); tr.appendChild(h('th', null, lab)); for (const v of [a, b]) tr.appendChild(h('td', v == null ? 'na' : null, v == null ? 'k. A.' : v)); tb.appendChild(tr); };
+    row('F', fmtFkN(d.fSL), fmtFkN(d.fV));
+    row('Isp', fmtI(d.iSL), fmtI(d.iV));
+    const ve = r => r ? (r[0] === r[1] ? fmtN(r[0] * G0, 3) : fmtN(r[0] * G0, 3) + '–' + fmtN(r[1] * G0, 3)) + ' m/s' : null;
+    row('vₑ,eff', ve(d.iSL), ve(d.iV));
+    const md = (F, I) => (F && I) ? 'ca. ' + fmtN(geo(F) * 1000 / (geo(I) * G0), 3) + ' kg/s' : null;
+    row('ṁ = F/vₑ', md(d.fSL, d.iSL), md(d.fV, d.iV));
+    t.appendChild(tb); f.appendChild(t);
+    const Fw = d.fSL || d.fV;
+    if (d.m != null && Fw) kv(f, `T/W Triebwerk (${d.fSL ? 'MH' : 'Vak'}, berechnet)`, 'ca. ' + fmtN(geo(Fw) * 1000 / (d.m * G0), 3));
+    const Iu = iOf(d) || d.iV || d.iSL;
+    if (Iu) f.appendChild(h('p', 'formula', `Isp = vₑ,eff / g₀  →  vₑ = ${fmtN(geo(Iu), 4)} s · 9,80665 m/s² ≈ ${fmtN(geo(Iu) * G0, 3)} m/s`));
+  } else if (lvl === 2 && I) {
+    f.appendChild(h('p', 'formula', `vₑ = Isp · g₀ ≈ ${fmtN(geo(I) * G0 / 1000, 2)} km/s`));
+  }
+  if (!hasPoint(d)) f.appendChild(h('p', 'rem', `Bei ${c} fehlt ${!F && !I ? 'Schub und Isp' : !F ? 'der Schub' : 'der Isp'} in den Daten – deshalb liegt es unten in der Ablage statt auf der Karte.`));
+  if (d.id === 'nstar' && lvl === 1) f.appendChild(h('p', 'rem', 'Der Schub ist so sanft wie das Gewicht eines Blatts Papier – aber er hält monatelang an.'));
+  f.appendChild(h('p', 'rem', 'Bemerkung: ' + d.note));
+  if (hint) f.appendChild(h('p', 'hint', hint));
+  return f;
+}
+function cardCompare(a, b) {
+  const f = document.createDocumentFragment(), c = COND_L[S.cond], lvl = S.lvl;
+  const k = h('p', 'i-k'); k.appendChild(document.createTextNode('Vergleich · ' + c));
+  const x = h('button', 'x', 'Schließen'); x.type = 'button'; x.addEventListener('click', () => { S.pins = []; syncHL(); renderInfo(); kickOnce(); }); k.appendChild(x);
+  f.appendChild(k);
+  const vs = h('div', 'vs');
+  for (const [i, d] of [[0, a], [1, b]]) {
+    const e = h('div', 'e'); if (i === 0) { e.appendChild(iconSvg(d.fam, 13)); e.appendChild(h('b', null, d.short)); } else { e.appendChild(h('b', null, d.short)); e.appendChild(iconSvg(d.fam, 13)); }
+    vs.appendChild(e); if (i === 0) vs.appendChild(h('span', 'v', 'VS'));
+  }
+  f.appendChild(vs);
+  const r = cmpRatios(a, b);
+  const box = (ok, big, small) => { const d = h('div', 'ratio' + (ok ? '' : ' na')); d.appendChild(h('b', null, big)); if (small) d.appendChild(h('span', null, small)); f.appendChild(d); };
+  if (r.f) {
+    const big = r.f.x < 1.05 ? 'Etwa gleich viel Schub' : (lvl === 1 ? ratioWords(r.f.x) : fmtRatio(r.f.x) + '×') + ' mehr Schub';
+    box(true, big, `${r.f.win.short} (${fmtF(fOf(r.f.win))}) gegenüber ${r.f.lose.short} (${fmtF(fOf(r.f.lose))})` + (lvl >= 2 && r.f.x >= 10 ? ` · ${fmtN(Math.log10(r.f.x), 2)} Größenordnungen` : ''));
+  } else box(false, `Schub: bei ${c} für ${[a, b].filter(d => !fOf(d)).map(d => d.short).join(' und ')} keine Angabe`);
+  if (r.i) {
+    const big = r.i.x < 1.05 ? 'Etwa gleicher Isp' : (lvl === 1 ? fmtRatio(r.i.x) + '-mal sparsamer' : fmtRatio(r.i.x) + '× höherer Isp');
+    box(true, big, `${r.i.win.short} (${fmtI(iOf(r.i.win))}) gegenüber ${r.i.lose.short} (${fmtI(iOf(r.i.lose))})` + (lvl === 3 ? ` · vₑ ${fmtN(geo(iOf(r.i.win)) * G0 / 1000, 2)} vs. ${fmtN(geo(iOf(r.i.lose)) * G0 / 1000, 2)} km/s` : ''));
+  } else box(false, `Isp: bei ${c} für ${[a, b].filter(d => !iOf(d)).map(d => d.short).join(' und ')} keine Angabe`);
+  if (r.f && r.i && r.f.win !== r.i.win && r.f.x > 1.05 && r.i.x > 1.05) {
+    f.appendChild(h('p', 'rem', lvl === 1 ? `Typisch: ${r.f.win.short} hat mehr Kraft, ${r.i.win.short} ist sparsamer – beides zugleich geht nicht.` : `Klassischer Zielkonflikt: ${r.f.win.short} gewinnt beim Schub, ${r.i.win.short} beim Isp.`));
+  }
+  if (lvl >= 2) {
+    const sp = h('div');
+    const two = (lab, fa, fb) => kv(sp, lab, `${fa ?? 'k. A.'}  ·  ${fb ?? 'k. A.'}`);
+    two('Kammerdruck', a.pc != null ? fmtN(a.pc) + ' bar' : null, b.pc != null ? fmtN(b.pc) + ' bar' : null);
+    two('Masse', a.m != null ? fmtN(a.m, 4) + ' kg' : null, b.m != null ? fmtN(b.m, 4) + ' kg' : null);
+    two('Reifegrad', a.ready, b.ready);
+    f.appendChild(sp);
+  }
+  if (S.cond === 'sl' && (!r.f || !r.i)) f.appendChild(h('p', 'hint', 'Tipp: Auf „Vakuum“ umschalten – dort haben fast alle Triebwerke Werte.'));
+  f.appendChild(h('p', 'hint', 'Werte gerundet; Bereiche über das geometrische Mittel verglichen. Dritte Blase anklicken = neuer Vergleich.'));
+  return f;
+}
+function cardDefault() {
+  const f = document.createDocumentFragment(), lvl = S.lvl;
+  f.appendChild(h('p', 'i-k', 'So liest du die Karte'));
+  const w = h('div', 'def');
+  w.appendChild(h('p', null, lvl === 1
+    ? 'Oben stehen die kräftigsten Triebwerke, rechts die sparsamsten. Jede Linie nach oben bedeutet zehnmal mehr Kraft.'
+    : lvl === 2 ? 'Beide Achsen sind logarithmisch: Gleiche Abstände bedeuten gleiche Faktoren. Form und Farbe zeigen die Familie.'
+    : 'Log-log-Darstellung, Betriebspunkt einheitlich (F4). Bereiche (z. B. SRB, MR-103) als Balken, Position im geometrischen Mittel.'));
+  const ol = h('ol', 'steps');
+  [['1', 'Über eine Form fahren oder tippen – die Karte erklärt das Triebwerk.'], ['2', 'Klicken fixiert die Karte.'], ['3', 'Eine zweite Form anklicken – du siehst, wievielmal stärker oder sparsamer.']]
+    .forEach(([n, t]) => { const li = h('li'); li.appendChild(h('i', null, n)); li.appendChild(document.createTextNode(t)); ol.appendChild(li); });
+  w.appendChild(ol);
+  f.appendChild(w);
+  return f;
+}
+let infoKey = '';
+function renderInfo() {
+  let key, build;
+  const p = S.pins;
+  if (S.hover && !p.includes(S.hover)) {
+    const d = byId[S.hover].d;
+    key = 'h:' + d.id + ':' + p.join(',');
+    build = () => cardEngine(d, p.length === 1 ? `Klicken: mit ${byId[p[0]].d.short} vergleichen` : p.length === 2 ? 'Klicken startet einen neuen Vergleich.' : 'Klicken fixiert die Karte · zweite Blase = Vergleich');
+  } else if (p.length === 2) { key = 'c:' + p.join(','); build = () => cardCompare(byId[p[0]].d, byId[p[1]].d); }
+  else if (p.length === 1) { key = 'p:' + p[0]; build = () => cardEngine(byId[p[0]].d, 'Zweite Blase anklicken = Vergleich · Esc löst'); }
+  else { key = 'd'; build = cardDefault; }
+  key += '|' + S.lvl + S.cond;
+  info.classList.toggle('open', p.length > 0);
+  if (key === infoKey) return;
+  infoKey = key;
+  infoIn.textContent = ''; infoIn.appendChild(build());
+}
+
+/* ===================== Insight-Zeile & Hinweise ===================== */
+const insight = document.getElementById('insight'), note = document.getElementById('note');
+function renderInsight() {
+  const pts = NODES.filter(n => n.vis && n.plotted).map(n => n.d);
+  insight.textContent = '';
+  const add = (b, s) => { const sp = h('span'); sp.appendChild(h('b', null, b)); sp.appendChild(document.createTextNode(' ' + s)); insight.appendChild(sp); };
+  if (pts.length >= 2) {
+    const fs = pts.map(d => geo(fOf(d))), is = pts.map(d => geo(iOf(d)));
+    const fr = Math.max(...fs) / Math.min(...fs), ir = Math.max(...is) / Math.min(...is);
+    add(S.lvl === 1 ? ratioWords(fr) : fmtRatio(fr) + '×', S.lvl === 1 ? 'so viel Kraft hat das stärkste gegenüber dem schwächsten' : `Schub-Spannweite (${fmtN(Math.log10(fr), 2)} Größenordnungen)`);
+    add(fmtRatio(ir) + '×', S.lvl === 1 ? 'sparsamer ist das sparsamste' : 'Isp-Spannweite');
+  }
+  add(String(pts.length), `von 13 mit Werten bei ${COND_L[S.cond]}`);
+  const parts = [];
+  if (S.size === 'pc') parts.push(`Fläche ∝ Kammerdruck (7–300 bar); hohle Form = Kammerdruck nicht angegeben (${DATA.filter(d => d.pc == null).length} von 13)`);
+  else if (S.size === 'm') parts.push(`Fläche ∝ Trockenmasse (0,33–18 100 kg, Mindestgröße 4 px); hohle Form = Masse nicht angegeben (${DATA.filter(d => d.m == null).length} von 13)`);
+  else parts.push('Alle Formen gleich groß – „Blasengröße“ zeigt Kammerdruck oder Masse, wo belegt');
+  parts.push('Balken = Wertebereich');
+  parts.push('Alle Werte gerundete Richtwerte');
+  note.textContent = parts.join(' · ') + '.';
+}
+
+/* ===================== Tabelle ===================== */
+function buildTable() {
+  const t = document.getElementById('tab'); t.textContent = '';
+  const cols = [['Triebwerk'], ['Familie / Typ'], ['Treibstoffe'], ['Schub MH', 1], ['Schub Vak', 1], ['Isp MH', 1], ['Isp Vak', 1], ['Kammer­druck', 1], ['Masse', 1], ['Einsatz'], ['Reifegrad']];
+  const th = h('thead'), tr0 = h('tr');
+  cols.forEach(([c, num]) => { const e = h('th', num ? 'num' : null, c); e.scope = 'col'; tr0.appendChild(e); }); th.appendChild(tr0); t.appendChild(th);
+  const tb = h('tbody');
+  for (const d of DATA) {
+    const tr = h('tr'); tr.dataset.id = d.id; tr.tabIndex = 0;
+    const n = h('th'); n.scope = 'row'; n.appendChild(iconSvg(d.fam, 11)); n.appendChild(document.createTextNode(d.short)); tr.appendChild(n);
+    tr.appendChild(h('td', null, `${FAM[d.fam].label} · ${d.typ}`));
+    tr.appendChild(h('td', null, d.prop));
+    const num = v => tr.appendChild(h('td', 'num' + (v == null ? ' na' : ''), v == null ? 'k. A.' : v));
+    num(fmtF(d.fSL)); num(fmtF(d.fV)); num(fmtI(d.iSL)); num(fmtI(d.iV));
+    num(d.pc != null ? fmtN(d.pc) + ' bar' : null); num(d.m != null ? fmtN(d.m, 4) + ' kg' : null);
+    tr.appendChild(h('td', null, d.use)); tr.appendChild(h('td', null, d.ready));
+    const go = () => { if (!S.pins.includes(d.id)) pick(d.id); chart.scrollIntoView({ behavior: reduce.matches ? 'auto' : 'smooth', block:'center' }); };
+    tr.addEventListener('click', go); tr.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    tb.appendChild(tr);
+  }
+  t.appendChild(tb);
+}
+
+/* ===================== Zustandswechsel ===================== */
+function update(animate, staggerMs = 0) {
+  computeTargets(); syncTrayTitle(); renderInsight();
+  if (!S.intro) return;
+  if (!animate || reduce.matches) { applyTargets(0, null, true); kick(); return; }
+  const order = NODES.slice().sort((a, b) => a.T.x - b.T.x);
+  applyTargets(staggerMs, order);
+  renderInfo();
+}
+function setCond(c) { if (S.cond === c) return; S.cond = c; update(true, 34); renderInfo(); }
+function setLevel(l) {
+  if (S.lvl === l) return; S.lvl = l;
+  const lead = document.getElementById('lead');
+  lead.style.opacity = 0;
+  setTimeout(() => { lead.textContent = LEAD[l]; lead.style.opacity = 1; }, 160);
+  buildAxes(); buildZones(); update(true); renderInfo();
+}
+
+/* ===================== Start + Signature-Moment ===================== */
+document.getElementById('lead').textContent = LEAD[S.lvl];
+layout(); buildLabels(); buildTable(); computeTargets(); renderInsight(); renderInfo();
+// Ausgangslage: alles in der Mitte, unsichtbar, Achse zusammengeklappt
+(function park() {
+  const cx = L.M.l + L.pw / 2, cy = L.M.t + L.ph / 2;
+  for (const n of NODES) { KEYS.forEach(k => n.s[k] = spr(0)); n.s.x = spr(cx); n.s.y = spr(cy); n.s.lx.v = n.T.lx; n.s.ly.v = n.T.ly; renderNode(n); }
+  drawAxes(0);
+})();
+function startIntro() {
+  if (S.intro) return; S.intro = true;
+  gZones.style.transitionDelay = reduce.matches ? '0s' : '.7s';
+  gZones.setAttribute('opacity', 1);
+  if (reduce.matches) { axU = 1; drawAxes(1); applyTargets(0, null, true); kick(); return; }
+  introT0 = performance.now();
+  const cx = L.M.l + L.pw / 2, cy = L.M.t + L.ph / 2;
+  const order = NODES.slice().sort((a, b) => Math.hypot(a.T.x - cx, a.T.y - cy) - Math.hypot(b.T.x - cx, b.T.y - cy));
+  // Label erst nach der Landung einblenden
+  order.forEach(n => { n.T = Object.assign({}, n.T); });
+  const now = performance.now();
+  order.forEach((n, k) => {
+    const T = n.T, la = T.la;
+    n.pend = { at:now + 260 + k * 55, T:Object.assign({}, T, { la:0 }) };
+    setTimeout(() => { n.s.la.t = la; kick(); }, 900 + k * 55);
+  });
+  kick();
+}
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); startIntro(); } }, { threshold:0.25 });
+  io.observe(chart);
+} else startIntro();
+
+/* Größe ändern: neu layouten, ohne Animation einrasten */
+let rzT = 0, lastW = chart.clientWidth;
+new ResizeObserver(() => {
+  clearTimeout(rzT);
+  rzT = setTimeout(() => {
+    if (Math.abs(chart.clientWidth - lastW) < 2) return; lastW = chart.clientWidth;
+    layout(); computeTargets();
+    if (S.intro) { gZones.setAttribute('opacity', 1); axU = 1; drawAxes(1); applyTargets(0, null, true); }
+    else { const cx = L.M.l + L.pw / 2, cy = L.M.t + L.ph / 2; NODES.forEach(n => { n.s.x = spr(cx); n.s.y = spr(cy); renderNode(n); }); }
+    kick(); segSyncs.forEach(f => f());
+  }, 120);
+}).observe(chart);
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-20",
+  "favorite": "D4",
+  "ratings": { "D1": 1, "D2": 3, "D3": 2, "D4": 5 },
+  "decisions": [
+    "Designkonzept komplett von D4 (Split-Screen: Bühne links, Erklärspalte rechts)",
+    "Funktions-Ablauf von D3 übernehmen (Zeitleiste mit Phasenmarken, Play/Scrub, Bildunterschrift je Phase)"
+  ],
+  "issues": [
+    "Zu wenig Information zu den einzelnen Bauteilen – sollen die Einzelteile wirklich erklären",
+    "Mehr Informationstext zu Bauteilen, Funktionen und Entwicklung – trotzdem übersichtlich"
+  ],
+  "user_ideas": ["Ausklappmöglichkeit für Bauteil-Details"],
+  "next_steps": ["Runde 3: 4 Varianten auf Basis D4 + D3-Funktion mit mehr, aufklappbarem Inhalt"]
+}

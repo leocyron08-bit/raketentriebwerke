@@ -1,0 +1,7 @@
+{
+  "title": "Zusammenführung – R1 + Vergleich",
+  "round": 4,
+  "variants": [
+    { "id": "F1", "name": "Zusammengeführt", "file": "variant-f1.html", "idea": "R1 Akkordeon als Basis + Antriebs-Vergleich aus R4, verfeinerte Animationen, flüssiger Wechsel zwischen Bauteilen." }
+  ]
+}

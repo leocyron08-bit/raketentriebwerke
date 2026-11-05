@@ -1,0 +1,12 @@
+{
+  "source": "pasted text (Leo, 2026-10-27)",
+  "favorite": "L1",
+  "ratings": { "L1": 4, "L2": 1, "L3": 2, "L4": 4 },
+  "notes": {
+    "L1": "Idee gut, muss noch besser umgesetzt werden.",
+    "L4": "Idee auch gut, Ansicht sehr gut und sehr ansprechend. Ansichten wie Geschichte müssen verbessert werden – man kann nicht zurückklicken."
+  },
+  "combine": "L1 und L4 sind schon gute Versionen.",
+  "overall": "Überfluss an Informationen, zu viel auf einmal. Besser und logischer kategorisieren. Fenster sollen in der Größe anpassbar sein. Alles muss besser verbunden werden.",
+  "clarified": { "versions": "2 Kombis", "too_much_means": ["Unklare Gliederung", "Fehlende Orientierung"] }
+}

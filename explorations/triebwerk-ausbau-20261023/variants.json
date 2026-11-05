@@ -1,0 +1,7 @@
+{
+  "title": "Ausbau – 11 Antriebe, Lernteil, Duell",
+  "round": 6,
+  "variants": [
+    { "id": "E3", "name": "Ausbau", "file": "variant-e3.html", "idea": "E2 + 7 neue Antriebe (3D, Bauteile, Funktion), Antriebsauswahl nach Familie, Lernteil mit Formeln & Rechnern, Duell-Vergleich (V2) als eigener Abschnitt." }
+  ]
+}

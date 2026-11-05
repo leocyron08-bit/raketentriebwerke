@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-21",
+  "favorite": "E1",
+  "ratings": {
+    "E1": 4
+  },
+  "decisions": [
+    "E1 ist das Endprodukt",
+    "E2 = E1 + freier Zoom: Mausrad/Trackpad über der Bühne, zwei Finger auf Touch, Buttons + − Zurücksetzen, Tasten + − 0; Zoom setzt sich bei Bauteil-/Triebwerkswechsel zurück"
+  ],
+  "next_steps": [
+    "Inhalte erweitern (docs)",
+    "Vergleichsrunde vergleich-20261023 (3 Demos)",
+    "E3 = E2 + neue Antriebe + Formeln"
+  ],
+  "followup_2026-10-23": {
+    "E2": "super, Layout ist super",
+    "wishes": [
+      "mehr Antriebe: weitere Flüssig-Zyklen (Expander, druckgefördert/hypergol, Stufenverbrennung oxidatorreich), weitere Chemische (Hybrid, Monergol/Kaltgas), Zukunft/Exotisch (Nuklear-thermisch, Aerospike)",
+      "schönerer Vergleich (nicht nur Tabelle) → 3 Demos per design-shotgun",
+      "mehr Lerninhalt: Formeln & Rechenbeispiele mit interaktiven Rechnern"
+    ]
+  }
+}

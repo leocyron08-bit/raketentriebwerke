@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-23",
+  "favorite": "V2",
+  "ratings": { "V1": 2, "V2": 5, "V3": null },
+  "decisions": [
+    "V2 Duell wird der Vergleich – als eigener Abschnitt der Hauptseite (E3), ersetzt die alte Vergleichstabelle",
+    "Hauptbestandteil bleibt die Einzelansicht der Antriebe (3D, Bauteile, Funktion)",
+    "Antriebs-Auswahl (Karten-Picker nach Familie) aus V2 gefällt – als Vorbild für die Triebwerksauswahl"
+  ],
+  "next_steps": ["E4 = E3 + V2-Duell als Abschnitt"]
+}

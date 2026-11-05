@@ -1,0 +1,960 @@
+<!doctype html>
+<html lang="de" class="noanim">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Triebwerks-Duell</title>
+<meta name="description" content="Variante V2 · Duell: zwei Triebwerke Seite an Seite, gespiegelte Kennzahl-Balken und ein Δv-Rennen.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* Tokens 1:1 aus triebwerk-final-20261021-r5/variant-e2.html, ergänzt um zwei Ecken-Farben (validiert, dataviz) */
+:root{
+  --bg:#eef0f3; --ink:#0c0e13; --ink2:#3a3f4a; --mute:#737a87; --line:rgba(12,14,19,.09); --line2:rgba(12,14,19,.14);
+  --card:#ffffff; --accent:#0a66ff; --fuel:#ff7a1a; --lox:#12b5e5; --ion:#7c5cff;
+  --shadow:0 24px 48px -30px rgba(20,24,40,.34), 0 2px 8px rgba(20,24,40,.05);
+  --shadow-s:0 8px 20px -12px rgba(20,24,40,.30), 0 1px 3px rgba(20,24,40,.06);
+  --ease:cubic-bezier(.2,.8,.2,1); --ease-io:cubic-bezier(.65,.05,.36,1); --ease-spr:cubic-bezier(.3,.05,.12,1);
+  --d-s:.25s; --d-m:.5s; --d-l:.9s;
+  --r-xl:28px; --r-md:16px; --r-sm:12px;
+  --cL:#2a78d6; --cR:#eb6834;            /* blaue Ecke / orange Ecke */
+  --cLs:rgba(42,120,214,.14); --cRs:rgba(235,104,52,.14);
+  --track:#f1f3f6;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font-family:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.vbadge{position:fixed;right:16px;top:16px;z-index:40;display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;
+  font:600 11px/1 Sora,sans-serif;letter-spacing:.04em;color:var(--ink);background:rgba(255,255,255,.72);border:1px solid var(--line);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:var(--shadow-s)}
+.vbadge i{width:9px;height:9px;border-radius:50%;background:linear-gradient(90deg,var(--cL) 50%,var(--cR) 50%)}
+
+.wrap{max-width:1160px;margin:0 auto;padding:72px 24px 96px}
+.eyebrow{font:600 11px/1.3 Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 14px}
+h1{font:600 clamp(36px,4.6vw,60px)/.98 Sora,sans-serif;letter-spacing:-.045em;margin:0 0 18px}
+h2{font:600 clamp(24px,2.6vw,32px)/1.08 Sora,sans-serif;letter-spacing:-.035em;margin:0}
+.lead{font:400 17px/1.62 Manrope,sans-serif;color:var(--ink2);margin:0 0 28px;max-width:62ch;transition:opacity .3s var(--ease)}
+.fine{font:500 12.5px/1.55 Manrope,sans-serif;color:var(--mute);margin:16px 0 0}
+.fade-out{opacity:0}
+
+/* ---------- Steuerung ---------- */
+.ctrls{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:24px}
+.lv{position:relative;display:inline-flex;padding:4px;border-radius:999px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow-s)}
+.lv button{position:relative;z-index:1;appearance:none;-webkit-appearance:none;border:0;background:none;cursor:pointer;height:34px;padding:0 14px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:7px;font:600 12.5px/1 Manrope,sans-serif;color:var(--ink2);transition:color .3s var(--ease) .08s;white-space:nowrap}
+.lv .st{display:inline-flex;gap:2px}
+.lv .st b{width:3px;height:9px;border-radius:2px;background:currentColor;opacity:.25}
+.lv .st b.f{opacity:1}
+.lv button[aria-checked="true"]{color:#fff}
+.lv .ind{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:999px;background:var(--ink);transition:transform .45s var(--ease),width .45s var(--ease)}
+.acts{display:flex;gap:8px;margin-left:auto}
+.btn{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow-s);cursor:pointer;height:42px;padding:0 16px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:8px;font:600 13px/1 Sora,sans-serif;letter-spacing:-.01em;transition:transform .3s var(--ease),background .3s}
+.btn:hover{background:#f7f8fa}
+.btn:active{transform:scale(.97)}
+.btn svg{width:16px;height:16px;flex:none}
+.btn.dark{background:var(--ink);color:#fff;border-color:transparent}
+.btn.dark:hover{background:#22262f}
+
+/* ---------- Karten ---------- */
+.card{background:var(--card);border-radius:var(--r-xl);box-shadow:var(--shadow);border:1px solid var(--line)}
+.sec-h{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:20px}
+.sec-h p{margin:6px 0 0;font:400 15px/1.55 Manrope,sans-serif;color:var(--ink2);max-width:60ch}
+
+/* ---------- Arena ---------- */
+.arena{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 64px minmax(0,1fr);gap:0;padding:12px;overflow:hidden}
+.fighter{--c:var(--cL);--cs:var(--cLs);position:relative;border-radius:20px;padding:16px 16px 18px;min-width:0;
+  background:radial-gradient(110% 80% at 50% 30%,#ffffff 0%,#f6f7f9 50%,#eceef2 100%);will-change:transform}
+.fighter[data-side="R"]{--c:var(--cR);--cs:var(--cRs)}
+.fighter.slide{transition:transform .7s var(--ease-spr)}
+.f-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.corner{display:inline-flex;align-items:center;gap:8px;font:600 10.5px/1 Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
+.corner i{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 0 4px var(--cs);transition:background .5s,box-shadow .5s}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.8);border:1px solid var(--line);
+  font:600 11px/1 Manrope,sans-serif;color:var(--ink2);white-space:nowrap}
+.chip i{width:7px;height:7px;border-radius:50%}
+.art{position:relative;height:300px;margin:6px 0 8px;touch-action:pan-y;cursor:grab;transition:opacity .2s var(--ease),transform .35s var(--ease)}
+.art:active{cursor:grabbing}
+.art.out{opacity:0;transform:translateY(8px)}
+.art svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.plume{transform-box:fill-box;transform-origin:50% 0;transform:scaleY(.02);opacity:0;transition:transform 1.1s var(--ease-spr),opacity .5s var(--ease)}
+.lit .plume{transform:none;opacity:1}
+.flick{transform-box:fill-box;transform-origin:50% 0;animation:flick .13s ease-in-out infinite alternate}
+.flick2{transform-box:fill-box;transform-origin:50% 0;animation:flick2 .21s ease-in-out infinite alternate}
+.glow{transform-box:fill-box;transform-origin:50% 0;animation:glow 1.6s ease-in-out infinite alternate}
+@keyframes flick{from{transform:scale(1,1)}to{transform:scale(1.035,.955)}}
+@keyframes flick2{from{transform:scale(.97,1.02)}to{transform:scale(1.02,.97)}}
+@keyframes glow{from{opacity:.75}to{opacity:1}}
+.ionp{animation:ionp 1.4s linear infinite}
+@keyframes ionp{from{transform:translateY(0);opacity:0}12%{opacity:1}to{transform:translateY(var(--l,160px));opacity:0}}
+.f-nav{display:grid;grid-template-columns:40px minmax(0,1fr) 40px;align-items:center;gap:8px}
+.ibtn{appearance:none;-webkit-appearance:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.9);cursor:pointer;display:grid;place-items:center;
+  transition:background .25s,transform .25s var(--ease)}
+.ibtn:hover{background:#fff}
+.ibtn:active{transform:scale(.94)}
+.ibtn svg{width:14px;height:14px}
+.f-name{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:#fff;border-radius:16px;padding:10px 34px 10px 14px;cursor:pointer;text-align:left;min-width:0;position:relative;
+  box-shadow:var(--shadow-s);transition:box-shadow .3s var(--ease),transform .3s var(--ease)}
+.f-name:hover{box-shadow:0 0 0 3px var(--cs),var(--shadow-s)}
+.f-name b{display:block;font:600 17px/1.15 Sora,sans-serif;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-name span{display:block;margin-top:4px;font:500 12px/1.3 Manrope,sans-serif;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-name svg{position:absolute;right:12px;top:50%;width:12px;height:12px;margin-top:-6px;color:var(--mute)}
+.f-desc{margin:12px 4px 0;font:500 13px/1.5 Manrope,sans-serif;color:var(--ink2);min-height:3em;transition:opacity .25s var(--ease)}
+.vs{align-self:center;justify-self:center;z-index:2;width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;background:var(--ink);color:#fff;
+  display:grid;place-items:center;box-shadow:0 12px 28px -12px rgba(12,14,19,.6);transition:transform .5s var(--ease-spr)}
+.vs:hover{transform:rotate(180deg)}
+.vs span{font:700 14px/1 Sora,sans-serif;letter-spacing:.02em}
+.vs svg{display:none;width:18px;height:18px}
+.vs:hover span{display:none}
+.vs:hover svg{display:block;transform:rotate(180deg)}
+.scale-note{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);font:500 11px/1 Manrope,sans-serif;color:var(--mute);white-space:nowrap;pointer-events:none}
+
+.verdict{margin:28px auto 28px;max-width:52ch;text-align:center;font:600 clamp(20px,2.3vw,28px)/1.25 Sora,sans-serif;letter-spacing:-.025em;color:var(--ink);transition:opacity .3s var(--ease);min-height:2.5em}
+.verdict .k{white-space:nowrap}
+.verdict .k i{display:inline-block;width:.42em;height:.42em;border-radius:50%;margin:0 .22em .1em 0;vertical-align:middle}
+
+/* ---------- Kennzahl-Duelle ---------- */
+.metrics{padding:28px 28px 24px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font:600 13px/1.2 Manrope,sans-serif;color:var(--ink2)}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.legend i{width:12px;height:12px;border-radius:3px}
+.rw{display:grid;grid-template-rows:1fr;transition:grid-template-rows .55s var(--ease-io),opacity .45s var(--ease)}
+.rw.off{grid-template-rows:0fr;opacity:0}
+.rw>div{overflow:hidden;min-height:0}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) 168px minmax(0,1fr);grid-template-areas:"L n R" "c c c";align-items:center;padding:14px 0 12px;border-top:1px solid var(--line)}
+.rw:first-child .mrow{border-top:0}
+.mname{grid-area:n;text-align:center;padding:0 10px}
+.mname b{display:block;font:600 14px/1.2 Sora,sans-serif;letter-spacing:-.01em}
+.mname small{display:block;margin-top:3px;font:500 11px/1.25 Manrope,sans-serif;color:var(--mute)}
+.side{display:flex;align-items:center;gap:12px;min-width:0;position:relative}
+.side.L{grid-area:L;flex-direction:row}
+.side.R{grid-area:R;flex-direction:row-reverse}
+.val{flex:none;width:112px;font:600 15px/1.2 Sora,sans-serif;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.side.L .val{text-align:left}
+.side.R .val{text-align:right}
+.val small{display:block;font:500 11px/1.2 Manrope,sans-serif;color:var(--mute);letter-spacing:0;margin-top:2px}
+.val.na{color:var(--mute);font:500 13px/1.2 Manrope,sans-serif}
+.trk{position:relative;flex:1;height:24px;min-width:0}
+.trk::before{content:"";position:absolute;left:0;right:0;top:50%;height:14px;margin-top:-7px;background:var(--track);border-radius:4px}
+.side.L .trk::before{border-radius:4px 0 0 4px}
+.side.R .trk::before{border-radius:0 4px 4px 0}
+.tick{position:absolute;top:50%;width:1px;height:14px;margin-top:-7px;background:rgba(12,14,19,.07)}
+.bar{position:absolute;top:50%;height:14px;margin-top:-7px;width:0;background:var(--c);opacity:.32;transition:opacity .45s var(--ease),box-shadow .45s var(--ease)}
+.side.L .bar{right:0;border-radius:4px 0 0 4px}
+.side.R .bar{left:0;border-radius:0 4px 4px 0}
+.side.L{--c:var(--cL);--cs:var(--cLs)} .side.R{--c:var(--cR);--cs:var(--cRs)}
+.rng{position:absolute;top:0;bottom:0;background:rgba(255,255,255,.55)}
+.side.L .rng{left:0} .side.R .rng{right:0}
+.side.win .bar,.side.tie .bar{opacity:1}
+.side.win .bar{box-shadow:0 0 0 3px var(--cs),0 0 18px var(--c)}
+.wtag{position:absolute;top:-9px;font:700 9.5px/1 Sora,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);opacity:0;transform:translateY(3px);transition:opacity .35s var(--ease),transform .35s var(--ease);white-space:nowrap;pointer-events:none}
+.side.L .wtag{right:2px} .side.R .wtag{left:2px}
+.side.win .wtag{opacity:1;transform:none}
+.pill{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;background:var(--track);font:600 13px/1 Manrope,sans-serif;color:var(--ink2);white-space:nowrap;
+  transition:background .4s var(--ease),box-shadow .4s var(--ease),color .4s}
+.pill svg{width:13px;height:13px;flex:none}
+.pcell{flex:1;display:flex;min-width:0}
+.side.L .pcell{justify-content:flex-end} .side.R .pcell{justify-content:flex-start}
+.side.win .pill{background:#fff;color:var(--ink);box-shadow:0 0 0 2px var(--c),0 0 18px var(--cs)}
+.pill .dots{display:inline-flex;gap:3px}
+.pill .dots b{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.22}
+.pill .dots b.f{opacity:1;background:var(--c)}
+.mcap{grid-area:c;margin:10px auto 0;text-align:center;max-width:70ch;font:500 13px/1.5 Manrope,sans-serif;color:var(--ink2);transition:opacity .25s var(--ease)}
+.mcap:empty{display:none}
+.mcap code,.fx code{font:500 12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:#f3f4f7;border-radius:6px;padding:1px 6px;color:var(--ink)}
+
+/* ---------- Δv-Rennen ---------- */
+.race{padding:28px;margin-top:28px}
+.rctl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;gap:14px 24px;align-items:end;margin-bottom:18px}
+.sl label{display:flex;justify-content:space-between;gap:8px;font:600 12.5px/1.2 Manrope,sans-serif;color:var(--ink2);margin-bottom:8px}
+.sl label output{font:600 13px/1.2 Sora,sans-serif;color:var(--ink);font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--ink) var(--p,50%),#dfe2e7 var(--p,50%))}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:#dfe2e7}
+input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--ink)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--ink);margin-top:-8px;box-shadow:var(--shadow-s)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--ink)}
+.stage-r{position:relative;border-radius:20px;background:linear-gradient(180deg,#f8f9fb,#eef0f4);border:1px solid var(--line);overflow:hidden}
+.clock{position:absolute;right:14px;top:12px;text-align:right;pointer-events:none}
+.clock b{display:block;font:600 22px/1 Sora,sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.clock span{display:block;margin-top:4px;font:500 11px/1.2 Manrope,sans-serif;color:var(--mute)}
+#trk{display:block;width:100%}
+#trk text{font-family:Manrope,sans-serif}
+.rr-plume{transition:opacity .4s var(--ease)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.tile{--c:var(--cL);position:relative;border-radius:18px;background:#f7f8fa;border:1px solid var(--line);padding:14px 16px 14px 20px;min-width:0}
+.tile::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--c)}
+.tile.R{--c:var(--cR)}
+.tile h3{margin:0 0 10px;font:600 14px/1.2 Sora,sans-serif;letter-spacing:-.01em;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.badge{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;background:var(--ink);color:#fff;font:700 9.5px/1 Sora,sans-serif;letter-spacing:.1em;text-transform:uppercase;
+  opacity:0;transform:scale(.9);transition:opacity .4s var(--ease),transform .4s var(--ease)}
+.badge.on{opacity:1;transform:none}
+.badge:not(.on){display:none}
+.kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kv div{min-width:0}
+.kv span{display:block;font:500 11px/1.25 Manrope,sans-serif;color:var(--mute)}
+.kv b{display:block;margin-top:3px;font:600 16px/1.2 Sora,sans-serif;letter-spacing:-.01em;overflow-wrap:anywhere}
+.rtext{margin:18px 0 0;font:500 15px/1.6 Manrope,sans-serif;color:var(--ink2);max-width:75ch;transition:opacity .25s var(--ease)}
+.rtext b{color:var(--ink)}
+.fx{margin-top:14px;padding:14px 16px;border-radius:16px;background:#f7f8fa;border:1px solid var(--line);font:500 13px/1.75 Manrope,sans-serif;color:var(--ink2);overflow-x:auto}
+.fx:empty{display:none}
+.fx div{white-space:nowrap}
+
+/* ---------- Tabelle ---------- */
+details.tbl{margin-top:28px;padding:0}
+details.tbl summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:20px 28px;font:600 16px/1.2 Sora,sans-serif;letter-spacing:-.01em}
+details.tbl summary::-webkit-details-marker{display:none}
+details.tbl summary span{font:500 12.5px/1.2 Manrope,sans-serif;color:var(--mute)}
+details.tbl summary svg{width:14px;height:14px;transition:transform .35s var(--ease);flex:none}
+details[open].tbl summary svg{transform:rotate(180deg)}
+.tw{overflow-x:auto;padding:0 16px 20px}
+table{border-collapse:collapse;width:100%;font:500 12.5px/1.35 Manrope,sans-serif;font-variant-numeric:tabular-nums;min-width:980px}
+th{font:600 11px/1.25 Sora,sans-serif;letter-spacing:.02em;color:var(--mute);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line2);vertical-align:bottom}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink2)}
+td:first-child{color:var(--ink);font-weight:600}
+td.n,th.n{text-align:right;white-space:nowrap}
+td .na{color:#a3a9b3}
+tr.isL td:first-child{box-shadow:inset 4px 0 0 var(--cL)}
+tr.isR td:first-child{box-shadow:inset 4px 0 0 var(--cR)}
+.tset{display:inline-flex;gap:4px}
+.tset button{appearance:none;-webkit-appearance:none;border:1px solid var(--line2);background:#fff;border-radius:999px;height:26px;padding:0 9px;cursor:pointer;font:600 11px/1 Manrope,sans-serif;white-space:nowrap}
+.tset button:hover{background:#f3f4f7}
+.tset button i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+
+/* ---------- Picker ---------- */
+.picker{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:rgba(12,14,19,.28);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;visibility:hidden;transition:opacity .35s var(--ease),visibility 0s .35s}
+.picker.on{opacity:1;visibility:visible;transition:opacity .35s var(--ease),visibility 0s}
+.sheet{width:min(1040px,100%);max-height:86vh;overflow:auto;background:var(--bg);border-radius:28px 28px 0 0;padding:22px 22px 28px;box-shadow:0 -20px 60px -20px rgba(12,14,19,.4);
+  transform:translateY(40px);transition:transform .55s var(--ease-spr)}
+.picker.on .sheet{transform:none}
+@media (min-width:760px){.picker{align-items:center}.sheet{border-radius:28px;max-height:84vh}}
+.sh-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+.sh-h h2{font-size:22px;display:flex;align-items:center;gap:10px}
+.sh-h h2 i{width:12px;height:12px;border-radius:50%}
+.grp{margin-top:16px}
+.grp h3{margin:0 0 10px;font:600 11px/1.2 Sora,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);display:flex;align-items:center;gap:8px}
+.grp h3 i{width:7px;height:7px;border-radius:50%}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.pc{appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:#fff;border-radius:18px;padding:10px 12px 12px;cursor:pointer;text-align:left;position:relative;
+  box-shadow:var(--shadow-s);transition:transform .3s var(--ease),box-shadow .3s var(--ease)}
+.pc:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.pc .mini{height:112px;position:relative}
+.pc .mini svg{position:absolute;inset:0;width:100%;height:100%}
+.pc b{display:block;font:600 13.5px/1.2 Sora,sans-serif;letter-spacing:-.01em}
+.pc span{display:block;margin-top:3px;font:500 11.5px/1.3 Manrope,sans-serif;color:var(--mute)}
+.pc.cur{box-shadow:0 0 0 2px var(--pc,var(--cL)),var(--shadow-s)}
+.pc em{position:absolute;right:8px;top:8px;font:700 9px/1 Sora,sans-serif;letter-spacing:.1em;text-transform:uppercase;font-style:normal;padding:4px 7px;border-radius:999px;background:#f1f3f6;color:var(--ink2)}
+
+/* Tooltip */
+.tip{position:fixed;left:0;top:0;z-index:60;max-width:280px;padding:9px 12px;border-radius:12px;background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow);
+  font:500 12.5px/1.45 Manrope,sans-serif;pointer-events:none;opacity:0;transition:opacity .18s var(--ease)}
+.tip.on{opacity:1}
+.tip b{font:600 12.5px/1.3 Sora,sans-serif}
+
+/* ---------- Responsiv ---------- */
+@media (max-width:860px){
+  .wrap{padding:64px 16px 72px}
+  .acts{margin-left:0}
+  .rctl{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .rctl .btn{grid-column:1 / -1;justify-self:start}
+}
+@media (max-width:640px){
+  .arena{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:8px}
+  .vs{position:absolute;left:50%;top:150px;margin-left:-22px;width:44px;height:44px}
+  .vs span{font-size:12px}
+  .fighter{padding:12px 10px 14px}
+  .art{height:220px}
+  .f-nav{grid-template-columns:minmax(0,1fr)}
+  .f-nav .ibtn{display:none}
+  .f-name{padding:9px 26px 9px 10px}
+  .f-name b{font-size:14.5px}
+  .f-name svg{right:9px}
+  .chip{display:none}
+  .f-desc{font-size:12px;margin:10px 2px 0}
+  .metrics,.race{padding:20px 14px 18px}
+  .mrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"n n" "L R" "c c";row-gap:8px}
+  .mname{padding:0}
+  .mname b,.mname small{display:inline}
+  .mname small{margin-left:6px}
+  .side{flex-direction:column !important;align-items:stretch;gap:6px}
+  .side.L .val{text-align:left}
+  .side.R .val{text-align:right}
+  .val{width:auto;font-size:14px}
+  .trk{flex:none}
+  .wtag{top:-12px}
+  .tiles{grid-template-columns:1fr}
+  .rctl{grid-template-columns:1fr}
+  .kv b{font-size:15px}
+  details.tbl summary{padding:18px 16px}
+  .lv button{padding:0 11px;font-size:12px}
+  .lv .st{display:none}
+  .vbadge{top:auto;bottom:12px;right:12px}
+}
+html.noanim *:not(.plume),html.noanim *::before,html.noanim *::after{transition:none !important}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none !important;transition-duration:.01s !important}
+}
+</style>
+</head>
+<body>
+<div class="vbadge" aria-hidden="true"><i></i>Variante V2 · Duell</div>
+
+<main class="wrap">
+  <header>
+    <p class="eyebrow">Antriebsvergleich</p>
+    <h1>Duell der Triebwerke</h1>
+    <p class="lead" id="lead"></p>
+    <div class="ctrls">
+      <div class="lv" id="lvl" role="radiogroup" aria-label="Verständnisstufe">
+        <span class="ind" aria-hidden="true"></span>
+        <button role="radio" data-v="1" aria-checked="true"><span class="st"><b class="f"></b><b></b><b></b></span>Einsteiger</button>
+        <button role="radio" data-v="2" aria-checked="false"><span class="st"><b class="f"></b><b class="f"></b><b></b></span>Fortgeschritten</button>
+        <button role="radio" data-v="3" aria-checked="false"><span class="st"><b class="f"></b><b class="f"></b><b class="f"></b></span>Experte</button>
+      </div>
+      <div class="lv" id="pt" role="radiogroup" aria-label="Betriebspunkt">
+        <span class="ind" aria-hidden="true"></span>
+        <button role="radio" data-v="V" aria-checked="true">Vakuum</button>
+        <button role="radio" data-v="SL" aria-checked="false">Meereshöhe</button>
+      </div>
+      <div class="acts">
+        <button class="btn" id="swap" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h11M10 2l3 3-3 3M14 11H3M6 8l-3 3 3 3"/></svg>Tauschen</button>
+        <button class="btn dark" id="rand" type="button"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="12" height="12" rx="3"/><circle cx="5.5" cy="5.5" r="1" fill="currentColor"/><circle cx="10.5" cy="10.5" r="1" fill="currentColor"/><circle cx="10.5" cy="5.5" r="1" fill="currentColor"/><circle cx="5.5" cy="10.5" r="1" fill="currentColor"/></svg>Zufälliges Duell</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="arena card" aria-label="Die beiden Triebwerke">
+    <article class="fighter" id="fL" data-side="L"></article>
+    <button class="vs" id="vs" type="button" aria-label="Seiten tauschen"><span>VS</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h11M10 2l3 3-3 3M14 11H3M6 8l-3 3 3 3"/></svg></button>
+    <article class="fighter" id="fR" data-side="R"></article>
+  </section>
+
+  <p class="verdict" id="verdict" aria-live="polite"></p>
+
+  <section class="card metrics" aria-labelledby="mh">
+    <div class="sec-h">
+      <div><h2 id="mh">Kennzahl für Kennzahl</h2><p id="mlead"></p></div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div id="rows"></div>
+    <p class="fine" id="mfine"></p>
+  </section>
+
+  <section class="card race" id="race" aria-labelledby="rh">
+    <div class="sec-h">
+      <div><h2 id="rh">Δv-Rennen</h2><p id="rlead"></p></div>
+    </div>
+    <div class="rctl">
+      <div class="sl"><label for="m0">Startmasse m₀ <output id="m0o"></output></label><input id="m0" type="range" min="0" max="1000" step="1"></div>
+      <div class="sl"><label for="fr">Treibstoffanteil <output id="fro"></output></label><input id="fr" type="range" min="1" max="99" step="1"></div>
+      <button class="btn dark" id="go" type="button"><svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>Rennen starten</button>
+    </div>
+    <div class="stage-r">
+      <div class="clock" aria-hidden="true"><b id="clk">t = 0 s</b><span>Zeit läuft logarithmisch</span></div>
+      <svg id="trk" role="img" aria-label="Δv-Rennen der beiden Triebwerke"></svg>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <p class="rtext" id="rtext" aria-live="polite"></p>
+    <div class="fx" id="fx"></div>
+    <p class="fine" id="rfine"></p>
+  </section>
+
+  <details class="card tbl" id="tbl">
+    <summary><div>Alle 13 Triebwerke als Tabelle <span>· Fallback, zum Nachschlagen</span></div><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg></summary>
+    <div class="tw"><table id="table"></table></div>
+  </details>
+</main>
+
+<div class="picker" id="picker" aria-hidden="true">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pkh">
+    <div class="sh-h"><h2 id="pkh"></h2><button class="ibtn" id="pkx" type="button" aria-label="Schließen"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 3l8 8M11 3l-8 8"/></svg></button></div>
+    <div id="pkb"></div>
+  </div>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+(function(){
+'use strict';
+const G0 = 9.80665;
+const RM = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+/* ===== Daten: 1:1 aus docs/inhalt-triebwerke.md › Vergleichsdaten. null = „–“ (keine Angabe), [a,b] = Bereich ===== */
+const ENG = [
+ {id:'srb',name:'Space-Shuttle-SRB',typ:'Feststoff',fam:'fest',prop:'APCP (AP + Al + HTPB)',fSL:[12000,14700],fV:null,iSL:242,iV:268,pc:62,m:null,re:'nein',th:'nein',use:'Booster',mat:'geflogen',note:'Schubverlauf über Kanalgeometrie; 1981–2011',shape:'solid',pl:'apcp'},
+ {id:'merlin-1d',name:'Merlin 1D',typ:'Gasgenerator',fam:'flüssig',prop:'RP-1 / LOX',fSL:845,fV:914,iSL:282,iV:311,pc:100,m:470,re:'ja',th:'ja',use:'Erststufe',mat:'fliegt',note:'regelbar bis ca. 40 %',shape:'gg',pl:'rp1'},
+ {id:'raptor-2',name:'Raptor 2',typ:'Stufenverbrennung Full-Flow',fam:'flüssig',prop:'CH4 / LOX',fSL:2260,fV:null,iSL:327,iV:350,pc:300,m:1630,re:'ja',th:'ja',use:'Erststufe, Oberstufe',mat:'fliegt',note:'Starship-Testflüge; Vakuumvariante Isp ca. 380 s',shape:'ffsc',pl:'ch4'},
+ {id:'rs-25',name:'RS-25',typ:'Stufenverbrennung brennstoffreich',fam:'flüssig',prop:'LH2 / LOX',fSL:1860,fV:2280,iSL:366,iV:452,pc:206,m:3180,re:'nein',th:'ja',use:'Erststufe',mat:'fliegt',note:'109 % Leistungsstufe; regelbar 67–109 %',shape:'sc',pl:'lh2'},
+ {id:'nstar',name:'NSTAR (Dawn)',typ:'Ionentriebwerk',fam:'elektrisch',prop:'Xenon',fSL:null,fV:0.000092,iSL:null,iV:3100,pc:null,m:null,re:'ja',th:'ja',use:'Raumsonde',mat:'geflogen',note:'92 mN bei ca. 2.3 kW',shape:'ion',pl:'xe'},
+ {id:'rl10b-2',name:'RL10B-2',typ:'Expander',fam:'flüssig',prop:'LH2 / LOX',fSL:null,fV:110,iSL:null,iV:465,pc:44,m:300,re:'ja',th:'nein',use:'Oberstufe',mat:'fliegt',note:'RL10C-1: ca. 102 kN / 450 s; Serien-RL10 nicht regelbar',shape:'vac',pl:'lh2'},
+ {id:'aj10-137',name:'AJ10-137 (Apollo SPS)',typ:'Druckgefördert, hypergol',fam:'flüssig',prop:'Aerozine 50 / N2O4',fSL:null,fV:91,iSL:null,iV:314,pc:7,m:null,re:'ja',th:'nein',use:'Raumschiff-Hauptantrieb',mat:'geflogen',note:'Draco: ca. 0.4 kN / ca. 300 s (MMH / N2O4), fliegt',shape:'press',pl:'hyp'},
+ {id:'rd-180',name:'RD-180',typ:'Stufenverbrennung oxidatorreich',fam:'flüssig',prop:'RP-1 / LOX',fSL:3830,fV:4150,iSL:311,iV:338,pc:267,m:5480,re:'nein',th:'ja',use:'Erststufe',mat:'fliegt',note:'Atlas V, auslaufend; regelbar 47–100 %',shape:'twin',pl:'rp1'},
+ {id:'ss1-hybrid',name:'SpaceShipOne-Motor',typ:'Hybrid',fam:'Sonderform',prop:'HTPB / N2O',fSL:null,fV:[74,88],iSL:null,iV:250,pc:null,m:null,re:'nein',th:'nein',use:'Suborbital',mat:'geflogen',note:'Schub/Isp ohne Bezugsdruck angegeben; 2004',shape:'hybrid',pl:'htpb'},
+ {id:'mr-103',name:'Hydrazin-Düse 1-N-Klasse (MR-103)',short:'MR-103',typ:'Monergol',fam:'flüssig',prop:'Hydrazin (N2H4)',fSL:null,fV:[0.0002,0.0011],iSL:null,iV:[200,225],pc:null,m:0.33,re:'ja',th:'begrenzt',use:'Lageregelung',mat:'fliegt',note:'Schub sinkt mit Tankdruck (Blowdown)',shape:'mono',pl:'n2h4'},
+ {id:'coldgas-n2',name:'Kaltgas-Düse Stickstoff (z.B. MMU)',short:'Kaltgas N₂',typ:'Kaltgas',fam:'Sonderform',prop:'Stickstoff (N2)',fSL:null,fV:0.006,iSL:null,iV:73,pc:null,m:null,re:'ja',th:'nein',use:'Lageregelung',mat:'fliegt',note:'Isp theoretisch ca. 80 s; MMU-Düse ca. 6 N',shape:'cold',pl:'n2'},
+ {id:'nerva-xe',name:'NERVA XE Prime',typ:'Nuklear-thermisch',fam:'nuklear',prop:'LH2 (Reaktorheizung)',fSL:null,fV:247,iSL:null,iV:825,pc:39,m:18100,re:'ja',th:null,use:'Oberstufe, interplanetar (geplant)',mat:'nur Prüfstand',note:'28 Starts am Prüfstand; Flugtriebwerk-Auslegung 850 s',shape:'nuc',pl:'nuc'},
+ {id:'xrs-2200',name:'XRS-2200 (X-33)',typ:'Aerospike-Düse (Gasgenerator)',fam:'Sonderform',prop:'LH2 / LOX',fSL:909,fV:1184,iSL:339,iV:439,pc:58,m:null,re:null,th:null,use:'Erststufe (geplant)',mat:'nur Prüfstand',note:'Düsenbauform, kein Zyklus',shape:'spike',pl:'lh2'}
+];
+const BY = Object.fromEntries(ENG.map(e=>[e.id,e]));
+const short = e => e.short || e.name.replace(/ \(.*\)$/,'');
+/* Familien-Punkte nach Farbsprache im Brief */
+const FAM = {'flüssig':{l:'Flüssig',c:'#ff7a1a'},'fest':{l:'Feststoff',c:'#d9482b'},'Sonderform':{l:'Sonderform',c:'#9aa1ab'},'elektrisch':{l:'Elektrisch',c:'#7c5cff'},'nuklear':{l:'Nuklear',c:'#1f9d55'}};
+const FAM_ORDER = ['flüssig','fest','Sonderform','elektrisch','nuklear'];
+/* Strahlfarben: Farbsprache (Heißgas weiß→gelb→orange, Ionen violett, hypergol gelbgrün, Kaltgas hellgrau, nuklear warm + grüner Reaktor) */
+const PL = {
+  apcp:['#fff4cf','#ffb54a','#ff6a1f',1], rp1:['#fff1cf','#ffb054','#ff5a1f',1], ch4:['#fff3e6','#ff9a6b','#ff5a3d',.95],
+  lh2:['#ffffff','#ffd98f','#ffb054',.7], xe:['#efeaff','#a58bff','#4b5bff',.85], hyp:['#fbffd9','#d9ec6a','#9cbf1f',.85],
+  n2h4:['#fdffe8','#e3f08f','#b6cf3c',.7], n2:['#ffffff','#e3e7ec','#c2c8d0',.75], nuc:['#ffffff','#ffd98f','#ffb054',.75], htpb:['#fff2d6','#ffb35a','#ff6a1f',.95]
+};
+
+/* ===== Hilfen ===== */
+const $ = s => document.querySelector(s);
+const clamp = (x,a,b) => Math.min(b,Math.max(a,x));
+const mid = v => v==null ? null : Array.isArray(v) ? (v[0]+v[1])/2 : v;
+const lo = v => Array.isArray(v) ? v[0] : v;
+const hi = v => Array.isArray(v) ? v[1] : v;
+const NB = ' ';
+function sig(x,n){ if(!x) return 0; const p=Math.pow(10,n-1-Math.floor(Math.log10(Math.abs(x)))); return Math.round(x*p)/p; }
+function num(x,n){ n=n||3; if(x==null||!isFinite(x)) return '–'; const v=sig(x,n); const d=Math.max(0,n-1-Math.floor(Math.log10(Math.abs(v)||1)));
+  let s=v.toLocaleString('de-DE',{maximumFractionDigits:Math.min(d,8),useGrouping:false});
+  const [i,f]=s.split(','); const ii=i.replace(/\B(?=(\d{3})+(?!\d))/g,NB); return f!=null? ii+','+f : ii; }
+function fmtF(kN){ if(kN==null) return null; if(Array.isArray(kN)){ const [a,b]=kN; const u=unitF(b); return num(a/u.k,2)+'–'+num(b/u.k,2)+' '+u.s; } const u=unitF(kN); return num(kN/u.k,3)+' '+u.s; }
+function unitF(kN){ if(kN>=1) return {k:1,s:'kN'}; if(kN>=1e-4) return {k:1e-3,s:'N'}; return {k:1e-6,s:'mN'}; }
+function fmtS(v){ return v==null?null: Array.isArray(v)? num(v[0],3)+'–'+num(v[1],3)+' s' : num(v,3)+' s'; }
+function fmtKg(v){ return v==null?null: num(v,3)+' kg'; }
+function fmtMd(v){ if(v==null) return null; if(v>=1) return num(v,3)+' kg/s'; if(v>=1e-3) return num(v*1e3,3)+' g/s'; return num(v*1e6,2)+' mg/s'; }
+function fmtV(ms){ if(ms<.01) return '≈ 0 m/s'; return ms>=1000 ? num(ms/1000,3)+' km/s' : num(ms,3)+' m/s'; }
+function fmtDur(s){ if(s==null||!isFinite(s)) return '–';
+  if(s<60) return num(s,2)+' s'; if(s<3600) return num(s/60,2)+' min'; if(s<86400) return num(s/3600,2)+' h';
+  if(s<86400*365.25) return num(s/86400,2)+(s/86400<1.5?' Tag':' Tage'); const y=s/(86400*365.25); if(y>=1e6) return num(y/1e6,2)+' Mio. Jahre'; return num(y,2)+(y<1.5?' Jahr':' Jahre'); }
+function fmtR(r){ if(r>=1e6) return 'ca. '+num(r/1e6,2)+' Mio. Mal'; if(r>=1e3) return 'ca. '+num(r,2)+'-mal'; return 'ca. '+num(r,2)+'-mal'; }
+function fmtRx(r){ if(r>=1e6) return 'ca. '+num(r/1e6,2)+' Mio.×'; return 'ca. '+num(r,2)+'×'; }
+
+/* ===== Federn (ein rAF-Loop für alles) ===== */
+const springs = new Set(); let raf=0, last=0;
+function Spring(x,cb,k,z){ this.x=x; this.t=x; this.v=0; this.cb=cb; this.k=k||150; this.c=2*(z||.74)*Math.sqrt(this.k); }
+Spring.prototype.to=function(t){ this.t=t; if(RM.matches){ this.x=t; this.v=0; this.cb(t,true); return; } springs.add(this); wake(); };
+Spring.prototype.snap=function(t){ this.t=this.x=t; this.v=0; springs.delete(this); this.cb(t,true); };
+function wake(){ if(!raf){ last=performance.now(); raf=requestAnimationFrame(loop); } }
+function loop(now){ const dt=Math.min(.05,(now-last)/1000); last=now;
+  for(const s of springs){ const n=Math.max(1,Math.ceil(dt*240)), h=dt/n;
+    for(let i=0;i<n;i++){ const a=-s.k*(s.x-s.t)-s.c*s.v; s.v+=a*h; s.x+=s.v*h; }
+    const done=Math.abs(s.x-s.t)<2e-4&&Math.abs(s.v)<2e-3; if(done){ s.x=s.t; s.v=0; springs.delete(s); } s.cb(s.x,done); }
+  raf = springs.size ? requestAnimationFrame(loop) : 0; }
+
+/* ===== Zustand ===== */
+const S = { L:'merlin-1d', R:'nstar', lvl:1, pt:'V', m0:1000, fr:.5 };
+const other = side => side==='L'?'R':'L';
+const E = side => BY[S[side]];
+const pick = (e,k,pt) => e[k+(pt||S.pt)];
+function thrust(e,pt){ return pick(e,'f',pt); }
+function isp(e,pt){ return pick(e,'i',pt); }
+
+/* ===== Silhouetten (prozedural, je Bauform) ===== */
+let uidc=0;
+function bell(cx,y,chW,chH,thW,bH,exW){
+  const conv=(chW-thW)*.55, yt=y+chH+conv, ye=yt+bH;
+  const l=`M${cx-chW/2},${y+6} Q${cx-chW/2},${y} ${cx-chW/2+6},${y} L${cx+chW/2-6},${y} Q${cx+chW/2},${y} ${cx+chW/2},${y+6} L${cx+chW/2},${y+chH} `+
+    `C${cx+chW/2},${y+chH+conv*.6} ${cx+thW/2},${yt-conv*.3} ${cx+thW/2},${yt} C${cx+thW/2+2},${yt+bH*.35} ${cx+exW/2-3},${ye-bH*.38} ${cx+exW/2},${ye} `+
+    `L${cx-exW/2},${ye} C${cx-exW/2+3},${ye-bH*.38} ${cx-thW/2-2},${yt+bH*.35} ${cx-thW/2},${yt} C${cx-thW/2},${yt-conv*.3} ${cx-chW/2},${y+chH+conv*.6} ${cx-chW/2},${y+chH} Z`;
+  return {d:l,ye,yt};
+}
+function plumeSVG(id,cx,ye,w,L,col,opts){
+  const [c0,c1,c2,op]=col; opts=opts||{};
+  const p=(ww,LL)=>`M${cx-ww/2},${ye} C${cx-ww/2-ww*.1},${ye+LL*.22} ${cx-ww*.2},${ye+LL*.72} ${cx},${ye+LL} C${cx+ww*.2},${ye+LL*.72} ${cx+ww/2+ww*.1},${ye+LL*.22} ${cx+ww/2},${ye} Z`;
+  const anim=!opts.still;
+  let s=`<defs><linearGradient id="${id}pg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}" stop-opacity="${op}"/><stop offset=".45" stop-color="${c2}" stop-opacity="${op*.75}"/><stop offset="1" stop-color="${c2}" stop-opacity="0"/></linearGradient>`+
+    `<linearGradient id="${id}pc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c0}"/><stop offset="1" stop-color="${c1}" stop-opacity="0"/></linearGradient>`+
+    `<filter id="${id}bl" x="-50%" y="-20%" width="200%" height="140%"><feGaussianBlur stdDeviation="${opts.ion?5:7}"/></filter></defs>`;
+  s+=`<g class="plume"><path class="${anim?'glow':''}" d="${p(w*1.5,L*1.05)}" fill="${c2}" opacity="${op*.28}" filter="url(#${id}bl)"/>`;
+  s+=`<path class="${anim?'flick2':''}" d="${p(w,L)}" fill="url(#${id}pg)"/>`;
+  if(!opts.ion) s+=`<path class="${anim?'flick':''}" d="${p(w*.55,L*.38)}" fill="url(#${id}pc)"/>`;
+  if(opts.diamonds){ for(let k=0;k<4;k++){ const yy=ye+L*(.13+k*.15), r=w*(.2-k*.035); s+=`<path d="M${cx},${yy-r*1.3} L${cx+r},${yy} L${cx},${yy+r*1.3} L${cx-r},${yy} Z" fill="#fff" opacity="${.75-k*.15}"/>`; } }
+  if(opts.ion && anim){ for(let k=0;k<12;k++){ const x=cx+((k*37)%100/100-.5)*w*.8; s+=`<circle class="ionp" cx="${x.toFixed(1)}" cy="${ye+2}" r="1.6" fill="${c0}" style="--l:${(L*.85).toFixed(0)}px;animation-delay:-${(k*0.117).toFixed(2)}s"/>`; } }
+  return s+'</g>';
+}
+function artSVG(e,pt,still){
+  const id='g'+(uidc++);
+  const I = mid(isp(e,pt)!=null?isp(e,pt):(isp(e,'V')!=null?isp(e,'V'):isp(e,'SL')));
+  const F = mid(thrust(e,pt)!=null?thrust(e,pt):(thrust(e,'V')!=null?thrust(e,'V'):thrust(e,'SL')));
+  const nI = clamp((Math.log(I)-Math.log(60))/(Math.log(3200)-Math.log(60)),0,1);
+  const nF = clamp((Math.log10(F)+5)/9.3,0,1);
+  const L = 44+150*nI;
+  const col = PL[e.pl].slice(); col[3] = col[3]*(.45+.55*nF);
+  const sl = pt==='SL';
+  const cx=100;
+  let body='', pl='';
+  const met=`url(#${id}m)`, noz=`url(#${id}n)`, dark='#5d646f';
+  const defs=`<defs><linearGradient id="${id}m" x1="0" x2="1"><stop offset="0" stop-color="#8d949e"/><stop offset=".35" stop-color="#f4f5f7"/><stop offset=".6" stop-color="#c9cdd3"/><stop offset="1" stop-color="#7b828c"/></linearGradient>`+
+    `<linearGradient id="${id}n" x1="0" x2="1"><stop offset="0" stop-color="#6f5f55"/><stop offset=".38" stop-color="#d9c6b6"/><stop offset=".62" stop-color="#a68f7e"/><stop offset="1" stop-color="#5e5048"/></linearGradient>`+
+    `<radialGradient id="${id}r" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#6ef0a4"/><stop offset="1" stop-color="#1f9d55" stop-opacity="0"/></radialGradient></defs>`;
+  const W=(w)=>w*(.7+.45*nF);
+  switch(e.shape){
+    case 'gg': { const b=bell(cx,40,36,26,15,64,66); body=`<path d="${b.d}" fill="${noz}"/><rect x="${cx-24}" y="22" width="48" height="20" rx="6" fill="${met}"/><rect x="${cx+20}" y="38" width="22" height="22" rx="6" fill="${met}"/><path d="M${cx+34},60 C${cx+38},90 ${cx+40},110 ${cx+42},128" stroke="${dark}" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+      pl=plumeSVG(id,cx,b.ye,W(60),L,col,{diamonds:sl,still}); break; }
+    case 'ffsc': { const b=bell(cx,44,32,30,14,56,60); body=`<path d="${b.d}" fill="${noz}"/><rect x="${cx-40}" y="20" width="18" height="40" rx="8" fill="${met}"/><rect x="${cx+22}" y="20" width="18" height="40" rx="8" fill="${met}"/><rect x="${cx-22}" y="30" width="44" height="18" rx="6" fill="${met}"/>`;
+      pl=plumeSVG(id,cx,b.ye,W(56),L,col,{diamonds:sl,still}); break; }
+    case 'sc': { const b=bell(cx,38,36,24,16,80,82); body=`<path d="${b.d}" fill="${noz}"/><rect x="${cx-46}" y="24" width="24" height="26" rx="8" fill="${met}"/><rect x="${cx+22}" y="24" width="24" height="26" rx="8" fill="${met}"/><rect x="${cx-20}" y="18" width="40" height="22" rx="6" fill="${met}"/>`;
+      pl=plumeSVG(id,cx,b.ye,W(78),L,col,{diamonds:sl,still}); break; }
+    case 'twin': { const a=bell(cx-28,48,26,22,12,58,50), b=bell(cx+28,48,26,22,12,58,50);
+      body=`<path d="${a.d}" fill="${noz}"/><path d="${b.d}" fill="${noz}"/><rect x="${cx-30}" y="16" width="60" height="30" rx="8" fill="${met}"/>`;
+      pl=plumeSVG(id+'a',cx-28,a.ye,W(46),L,col,{diamonds:sl,still})+plumeSVG(id+'b',cx+28,b.ye,W(46),L,col,{diamonds:sl,still}); break; }
+    case 'vac': { const b=bell(cx,22,22,18,10,92,86); body=`<path d="${b.d}" fill="${noz}"/><rect x="${cx-18}" y="10" width="36" height="16" rx="5" fill="${met}"/>`;
+      pl=plumeSVG(id,cx,b.ye,W(82),L,col,{still}); break; }
+    case 'press': { const b=bell(cx,24,22,18,10,88,90); body=`<path d="${b.d}" fill="${noz}"/><circle cx="${cx-26}" cy="22" r="10" fill="${met}"/><circle cx="${cx+26}" cy="22" r="10" fill="${met}"/><path d="M${cx-18},26 L${cx-8},30 M${cx+18},26 L${cx+8},30" stroke="${dark}" stroke-width="3" stroke-linecap="round"/>`;
+      pl=plumeSVG(id,cx,b.ye,W(86),L,col,{still}); break; }
+    case 'nuc': { const b=bell(cx,74,26,6,14,52,58); body=`<rect x="${cx-26}" y="6" width="52" height="72" rx="10" fill="${met}"/><rect x="${cx-26}" y="34" width="52" height="16" fill="url(#${id}r)" opacity=".9"/><rect x="${cx-26}" y="40" width="52" height="4" fill="#1f9d55" opacity=".5"/><path d="${b.d}" fill="${noz}"/>`;
+      pl=plumeSVG(id,cx,b.ye,W(56),L,col,{still}); break; }
+    case 'spike': { const ye=112; body=`<path d="M${cx-46},22 L${cx+46},22 L${cx+14},${ye} L${cx-14},${ye} Z" fill="${noz}"/><rect x="${cx-50}" y="12" width="100" height="14" rx="5" fill="${met}"/>`+
+      [-36,-18,0,18,36].map(o=>`<rect x="${cx+o-6}" y="24" width="12" height="8" rx="2" fill="${dark}"/>`).join('');
+      pl=plumeSVG(id,cx,ye,W(34),L,col,{still}); break; }
+    case 'solid': { body=`<path d="M${cx-22},14 Q${cx},0 ${cx+22},14 L${cx+22},106 L${cx-22},106 Z" fill="${met}"/>`+[38,62,86].map(y=>`<rect x="${cx-22}" y="${y}" width="44" height="3" fill="${dark}" opacity=".45"/>`).join('');
+      const b=bell(cx,104,24,4,14,24,44); body+=`<path d="${b.d}" fill="${noz}"/>`; pl=plumeSVG(id,cx,b.ye,W(48),L,col,{diamonds:sl,still}); break; }
+    case 'hybrid': { body=`<rect x="${cx-20}" y="10" width="40" height="70" rx="12" fill="${met}"/><rect x="${cx-20}" y="58" width="40" height="3" fill="${dark}" opacity=".45"/>`;
+      const b=bell(cx,78,22,6,12,36,48); body+=`<path d="${b.d}" fill="${noz}"/>`; pl=plumeSVG(id,cx,b.ye,W(44),L,col,{still}); break; }
+    case 'ion': { const ye=72; let dots=''; for(let i=-4;i<=4;i++) for(let j=-1;j<=1;j++){ const x=cx+i*8+(j%2?4:0), y=ye+j*3; if(Math.abs(i*8)<36) dots+=`<circle cx="${x}" cy="${y}" r="1.4" fill="#4b5bff" opacity=".7"/>`; }
+      body=`<path d="M${cx-42},${ye} L${cx-42},30 Q${cx-42},18 ${cx-30},18 L${cx+30},18 Q${cx+42},18 ${cx+42},30 L${cx+42},${ye} Z" fill="${met}"/><ellipse cx="${cx}" cy="${ye}" rx="42" ry="8" fill="#d9dcf3"/>${dots}<rect x="${cx+44}" y="46" width="10" height="18" rx="3" fill="${met}"/>`;
+      pl=plumeSVG(id,cx,ye,W(72),L,col,{ion:true,still}); break; }
+    case 'mono': { const b=bell(cx,92,12,10,6,16,18); body=`<rect x="${cx-16}" y="70" width="32" height="24" rx="6" fill="${met}"/><rect x="${cx-4}" y="58" width="8" height="14" rx="2" fill="${dark}"/>`+`<path d="${b.d}" fill="${noz}"/>`;
+      pl=plumeSVG(id,cx,b.ye,W(18),L,col,{still}); break; }
+    case 'cold': { const ye=118; body=`<rect x="${cx-14}" y="78" width="28" height="20" rx="6" fill="${met}"/><rect x="${cx-3}" y="64" width="6" height="16" rx="2" fill="${dark}"/><path d="M${cx-4},98 L${cx+4},98 L${cx+9},${ye} L${cx-9},${ye} Z" fill="${noz}"/>`;
+      pl=plumeSVG(id,cx,ye,W(18),L,col,{still}); break; }
+  }
+  return `<svg viewBox="12 0 176 300" preserveAspectRatio="xMidYMin meet" aria-hidden="true">${defs}${pl}${body}</svg>`;
+}
+
+/* ===== Kämpfer-Karten ===== */
+const ICON_L='<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.5L4.5 7 9 11.5"/></svg>';
+const ICON_R='<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2.5L9.5 7 5 11.5"/></svg>';
+const CHEV='<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 4.5l3 3 3-3"/></svg>';
+function buildFighter(side){
+  const el=$('#f'+side);
+  el.innerHTML=`<div class="f-top"><span class="corner"><i></i>${side==='L'?'Blaue Ecke':'Orange Ecke'}</span><span class="chip" data-r="fam"></span></div>
+   <div class="art" data-r="art"></div>
+   <div class="f-nav"><button class="ibtn" type="button" data-r="prev" aria-label="Vorheriges Triebwerk">${ICON_L}</button>
+   <button class="f-name" type="button" data-r="name" aria-haspopup="dialog"><b></b><span></span>${CHEV}</button>
+   <button class="ibtn" type="button" data-r="next" aria-label="Nächstes Triebwerk">${ICON_R}</button></div>
+   <p class="f-desc" data-r="desc"></p>`;
+  el.querySelector('[data-r=prev]').onclick=()=>step(side,-1);
+  el.querySelector('[data-r=next]').onclick=()=>step(side,1);
+  el.querySelector('[data-r=name]').onclick=()=>openPicker(side);
+  // Swipe auf der Illustration
+  const art=el.querySelector('[data-r=art]'); let x0=null,y0=0;
+  art.addEventListener('pointerdown',ev=>{x0=ev.clientX;y0=ev.clientY;});
+  art.addEventListener('pointerup',ev=>{ if(x0==null) return; const dx=ev.clientX-x0, dy=ev.clientY-y0; x0=null; if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)) step(side,dx<0?1:-1); });
+  art.addEventListener('pointercancel',()=>{x0=null;});
+}
+const shown={L:null,R:null,ptL:null,ptR:null};
+function renderFighter(side,instant){
+  const el=$('#f'+side), e=E(side), art=el.querySelector('[data-r=art]');
+  const fam=FAM[e.fam];
+  el.querySelector('[data-r=fam]').innerHTML=`<i style="background:${fam.c}"></i>${fam.l}`;
+  const nm=el.querySelector('[data-r=name]'); nm.querySelector('b').textContent=e.name; nm.querySelector('span').textContent=e.typ+' · '+e.prop;
+  nm.setAttribute('aria-label',`${side==='L'?'Blaue':'Orange'} Ecke: ${e.name}. Triebwerk wählen`);
+  setText(el.querySelector('[data-r=desc]'), descFor(e));
+  if(shown[side]===e.id && shown['pt'+side]===S.pt) return;
+  const swapIn=()=>{ art.innerHTML=artSVG(e,S.pt); art.classList.remove('lit'); void art.offsetWidth; art.classList.remove('out'); requestAnimationFrame(()=>art.classList.add('lit')); };
+  if(instant||shown[side]==null||RM.matches){ swapIn(); }
+  else { art.classList.add('out'); setTimeout(swapIn,200); }
+  shown[side]=e.id; shown['pt'+side]=S.pt;
+}
+function descFor(e){
+  if(S.lvl===1) return `Einsatz: ${e.use}. Stand: ${e.mat}.`;
+  if(S.lvl===2) return `Einsatz: ${e.use} · ${e.mat} · Familie ${FAM[e.fam].l.toLowerCase()}.`;
+  return `Bemerkung: ${e.note}.`;
+}
+function setText(el,txt,html){
+  const cur = html? el.innerHTML : el.textContent;
+  if(el._t===txt) return; el._t=txt;
+  if(RM.matches || !cur){ html? el.innerHTML=txt : el.textContent=txt; return; }
+  el.classList.add('fade-out'); clearTimeout(el._to);
+  el._to=setTimeout(()=>{ html? el.innerHTML=txt : el.textContent=txt; el.classList.remove('fade-out'); },220);
+}
+function step(side,d){ const i=ENG.findIndex(e=>e.id===S[side]); let j=i; do{ j=(j+d+ENG.length)%ENG.length; }while(ENG[j].id===S[other(side)]); S[side]=ENG[j].id; update(); }
+
+/* ===== Kennzahlen ===== */
+const M = [
+ {k:'F',lvl:1,name:['Schub','Schub','Schub F'],sub:['wie stark es drückt','log. Skala · Strich = ×10','log₁₀-Skala · Strich = ×10'],sc:'log',a:1e-5,b:3e4,best:'hi',
+  get:e=>thrust(e), fmt:fmtF},
+ {k:'I',lvl:1,name:['Sparsamkeit','Spez. Impuls','Isp'],sub:['wie viel ein Kilo Treibstoff bringt','lineare Skala','lineare Skala · vₑ = Isp·g₀'],sc:'lin',a:0,b:3300,best:'hi',
+  get:e=>isp(e), fmt:fmtS, extra:v=>S.lvl>1&&v!=null? 'vₑ ≈ '+fmtV(mid(v)*G0):''},
+ {k:'pc',lvl:2,name:['Druck','Kammerdruck','Kammerdruck pᶜ'],sub:['','lineare Skala','lineare Skala'],sc:'lin',a:0,b:320,best:'hi',
+  get:e=>e.pc, fmt:v=>v==null?null:num(v,3)+' bar'},
+ {k:'m',lvl:2,name:['Gewicht','Masse (trocken)','Trockenmasse'],sub:['','log. Skala · leichter gewinnt','log₁₀-Skala · leichter gewinnt'],sc:'log',a:.1,b:3e4,best:'lo',
+  get:e=>e.m, fmt:fmtKg},
+ {k:'tw',lvl:3,name:['','','Schub/Gewicht (Triebwerk)'],sub:['','','F / (m·g₀), log₁₀-Skala'],sc:'log',a:.01,b:1000,best:'hi',
+  get:e=>{const F=mid(thrust(e)); return F!=null&&e.m!=null? F*1000/(e.m*G0):null;}, fmt:v=>v==null?null:num(v,2)},
+ {k:'md',lvl:3,name:['','','Massenstrom ṁ'],sub:['','','ṁ = F/(Isp·g₀), log₁₀ · kein Sieger'],sc:'log',a:1e-7,b:1e4,best:null,
+  get:e=>{const F=mid(thrust(e)), I=mid(isp(e)); return F!=null&&I!=null? F*1000/(I*G0):null;}, fmt:fmtMd},
+ {k:'re',lvl:1,name:['Wieder zünden','Wiederzündbar','Wiederzündbar'],sub:['kann es nochmal starten?','',''],sc:'bool',get:e=>e.re},
+ {k:'th',lvl:2,name:['','Regelbar','Regelbar (drosselbar)'],sub:['','',''],sc:'bool',get:e=>e.th},
+ {k:'mat',lvl:1,name:['Erprobt?','Reifegrad','Reifegrad'],sub:['','',''],sc:'mat',get:e=>e.mat}
+];
+const frac=(m,v)=>{ if(v==null) return 0; if(m.sc==='log') return clamp((Math.log10(v)-Math.log10(m.a))/(Math.log10(m.b)-Math.log10(m.a)),0,1); return clamp((v-m.a)/(m.b-m.a),0,1); };
+const unfrac=(m,f)=> m.sc==='log'? Math.pow(10,Math.log10(m.a)+f*(Math.log10(m.b)-Math.log10(m.a))) : m.a+f*(m.b-m.a);
+const BOOLV={ja:2,begrenzt:1,nein:0};
+const MATV={'nur Prüfstand':1,'geflogen':2,'fliegt':2};
+const ICO={ja:'<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5l2.6 2.6L11 4.5"/></svg>',
+  nein:'<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4l6 6M10 4l-6 6"/></svg>',
+  begrenzt:'<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 2a5 5 0 0 1 0 10z" fill="currentColor"/></svg>',
+  na:'<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h6"/></svg>'};
+
+const rowsEl=$('#rows'); const R={};
+function buildRows(){
+  M.forEach(m=>{
+    const w=document.createElement('div'); w.className='rw'; const inner=document.createElement('div'); w.appendChild(inner);
+    const row=document.createElement('div'); row.className='mrow'; inner.appendChild(row);
+    row.innerHTML=`<div class="mname"><b></b><small></small></div>`+['L','R'].map(s=> m.sc==='bool'||m.sc==='mat'
+      ? `<div class="side ${s}" data-s="${s}"><div class="pcell"><span class="pill"></span></div></div>`
+      : `<div class="side ${s}" data-s="${s}"><div class="val"></div><div class="trk">${ticks(m,s)}<div class="bar"><div class="rng"></div></div><span class="wtag">${m.best==='lo'?'leichter':'vorn'}</span></div></div>`).join('')+`<p class="mcap"></p>`;
+    rowsEl.appendChild(w);
+    const o={m,w,row,name:row.querySelector('.mname b'),sub:row.querySelector('.mname small'),cap:row.querySelector('.mcap'),sides:{}};
+    ['L','R'].forEach(s=>{
+      const sd=row.querySelector('.side.'+s); const so={el:sd,val:sd.querySelector('.val'),bar:sd.querySelector('.bar'),rng:sd.querySelector('.rng'),pill:sd.querySelector('.pill'),txt:null,from:null};
+      if(so.bar){
+        so.sp=new Spring(0,(x,done)=>{ so.bar.style.width=(x*100).toFixed(3)+'%'; if(so.count){ if(done) so.val.firstChild.nodeValue=so.txt; else so.val.firstChild.nodeValue=m.fmt(unfrac(m,clamp(x,0,1))); } });
+        so.val.appendChild(document.createTextNode('')); so.small=document.createElement('small'); so.val.appendChild(so.small);
+      }
+      sd.addEventListener('pointerenter',ev=>showTip(ev,o,s)); sd.addEventListener('pointermove',moveTip); sd.addEventListener('pointerleave',hideTip);
+      o.sides[s]=so;
+    });
+    R[m.k]=o;
+  });
+}
+function ticks(m,s){ if(m.sc!=='log') return ''; let h=''; const a=Math.ceil(Math.log10(m.a)), b=Math.floor(Math.log10(m.b));
+  for(let p=a;p<=b;p++){ const f=frac(m,Math.pow(10,p)); h+=`<span class="tick" style="${s==='L'?'right':'left'}:${(f*100).toFixed(2)}%"></span>`; } return h; }
+
+function winner(m,vL,vR){
+  if(m.best==null||vL==null||vR==null) return null;
+  if(Math.abs(vL-vR)/Math.max(Math.abs(vL),Math.abs(vR),1e-30)<.02) return 'tie';
+  return (m.best==='hi')===(vL>vR)?'L':'R';
+}
+function valOf(m,e){ const raw=m.get(e); if(m.sc==='bool') return raw==null?null:BOOLV[raw]; if(m.sc==='mat') return MATV[raw]; return mid(raw); }
+
+function updateRows(){
+  const eL=E('L'), eR=E('R');
+  M.forEach(m=>{
+    const o=R[m.k]; const on=S.lvl>=m.lvl; o.w.classList.toggle('off',!on); o.w.setAttribute('aria-hidden',on?'false':'true');
+    o.name.textContent=m.name[S.lvl-1]||m.name[2]; o.sub.textContent=m.sub[S.lvl-1]||'';
+    const vL=valOf(m,eL), vR=valOf(m,eR); const w=winner(m,vL,vR);
+    ['L','R'].forEach(s=>{
+      const so=o.sides[s], e=s==='L'?eL:eR, raw=m.get(e);
+      so.el.classList.toggle('win',w===s); so.el.classList.toggle('tie',w==='tie'||(w==null&&valOf(m,e)!=null));
+      if(m.sc==='bool'||m.sc==='mat'){
+        let t,ic;
+        if(m.sc==='bool'){ t= raw==null?'keine Angabe':raw; ic=ICO[raw==null?'na':raw]; }
+        else { t=raw; ic=`<span class="dots"><b class="f"></b><b class="${MATV[raw]>=2?'f':''}"></b></span>`; }
+        const h=ic+t; if(so.pill._h!==h){ so.pill._h=h; so.pill.innerHTML=h; }
+        return;
+      }
+      const txt=m.fmt(raw);
+      const range=Array.isArray(raw);
+      const f=frac(m, range? hi(raw) : (raw==null?null:raw));
+      if(txt==null){ so.val.classList.add('na'); so.count=false; so.txt='keine Angabe'; so.val.firstChild.nodeValue='keine Angabe'; so.small.textContent=''; }
+      else {
+        so.val.classList.remove('na'); so.txt=txt;
+        const wasNum = so.lastF!=null && !so.lastRange;
+        so.count = !range && !RM.matches && wasNum && Math.abs(so.sp.x-f)>1e-3;
+        if(!so.count) so.val.firstChild.nodeValue=txt;
+        so.small.textContent = m.extra? m.extra(raw) : (range?'Bereich':'');
+      }
+      so.lastF = txt==null?null:f; so.lastRange=range;
+      so.sp.to(f);
+      // Bereich (a–b): Balken bis b, heller Teil = Spanne a..b am äußeren Ende
+      if(range){ const fl=frac(m,lo(raw)); so.rng.style.display=''; so.rng.style.width=((f>0?clamp(1-fl/f,0,1):0)*100).toFixed(2)+'%'; }
+      else so.rng.style.display='none';
+    });
+    setText(o.cap, capFor(m,eL,eR,vL,vR,w), true);
+  });
+  // Ticks: Skala ist fix (alle 13 auf derselben Achse), also nur einmal gebaut
+}
+function capFor(m,eL,eR,vL,vR,w){
+  const L=eL, Rr=eR, lvl=S.lvl;
+  const miss = vL==null&&vR==null ? 'Für beide ist hier kein Wert belegt.' : vL==null ? `Für ${short(L)} ist kein Wert belegt (${ptName()}).` : vR==null ? `Für ${short(Rr)} ist kein Wert belegt (${ptName()}).` : null;
+  if(m.sc==='bool'){
+    if(m.k==='re'){ if(vL==null||vR==null) return miss||''; if(vL===vR) return vL? 'Beide lassen sich erneut zünden.' : 'Keines von beiden lässt sich neu zünden – einmal an, bis zum Ende.';
+      const W=vL>vR?L:Rr; return `Nur ${short(W)} lässt sich erneut zünden${lvl>1?' – wichtig für Oberstufen, Landungen und Bahnkorrekturen':''}.`; }
+    if(vL==null||vR==null) return lvl>1?(miss||''):'';
+    if(vL===vR) return '';
+    const W=vL>vR?L:Rr; return `${short(W)} lässt sich ${vL===1||vR===1?'besser ':''}drosseln.`;
+  }
+  if(m.sc==='mat'){ if(vL===vR) return ''; const W=vL>vR?L:Rr, X=vL>vR?Rr:L; return `${short(X)} lief nur auf dem Prüfstand, ${short(W)} ist ${W.mat==='fliegt'?'im Einsatz':'schon geflogen'}.`; }
+  if(miss) return miss;
+  if(w==null) { if(m.k==='md'){ const r=Math.max(vL,vR)/Math.min(vL,vR); const W=vL>vR?L:Rr; return `${short(W)} setzt ${fmtR(r)} mehr Masse pro Sekunde um – das ist Folge von Schub und Isp, kein Vorteil.`; } return ''; }
+  if(w==='tie') return 'Hier liegen beide etwa gleichauf.';
+  const W=w==='L'?L:Rr; const r = m.best==='lo'? Math.max(vL,vR)/Math.min(vL,vR) : (w==='L'?vL/vR:vR/vL);
+  const rs=fmtR(r);
+  switch(m.k){
+    case 'F': return lvl===1? `${short(W)} drückt ${rs} so stark.` : lvl===2? `${short(W)} hat ${rs} so viel Schub.` : `F: ${fmtF(vL)} gegen ${fmtF(vR)} → ${num(r,3)} : 1, also ${num(Math.log10(r),2)} Zehnerstufen auf der Skala.`;
+    case 'I': return lvl===1? `${short(W)} holt aus jedem Kilo Treibstoff ${rs} so viel Schwung.` : lvl===2? `${short(W)} stößt sein Gas ${rs} so schnell aus – das macht es sparsamer.` : `vₑ = Isp·g₀: ${fmtV(vL*G0)} gegen ${fmtV(vR*G0)}.`;
+    case 'pc': return lvl===2? `${short(W)} arbeitet mit ${rs} so hohem Kammerdruck – kompaktere Brennkammer, aufwendigere Pumpen.` : `pᶜ ${num(vL,3)} gegen ${num(vR,3)} bar; höherer pᶜ erlaubt bei gleicher Düsengröße ein größeres ε.`;
+    case 'm': return `${short(W)} ist ${rs} leichter.`;
+    case 'tw': return `${short(W)} hebt ${rs} so viel seines eigenen Gewichts (Leichtbau-Maß, nicht Fahrzeug-T/W).`;
+  }
+  return '';
+}
+const ptName=()=>S.pt==='V'?'Vakuum':'Meereshöhe';
+
+/* Tooltip */
+const tip=$('#tip');
+function showTip(ev,o,s){ const e=E(s), m=o.m; if(S.lvl<m.lvl) return; const raw=m.get(e);
+  let v; if(m.sc==='bool') v=raw==null?'keine Angabe':raw; else if(m.sc==='mat') v=raw; else v=m.fmt(raw)||'keine Angabe';
+  const ctx = (m.k==='F'||m.k==='I')? ` (${ptName()})` : '';
+  tip.innerHTML=`<b>${e.name}</b><br>${m.name[S.lvl-1]||m.name[2]}${ctx}: ${v}${Array.isArray(raw)?' · Bereich laut Datenbasis':''}<br><span style="color:var(--mute)">${e.note}</span>`;
+  tip.classList.add('on'); moveTip(ev); }
+function moveTip(ev){ const w=tip.offsetWidth,h=tip.offsetHeight; let x=Math.round(ev.clientX+14), y=Math.round(ev.clientY-h-12); if(x+w>innerWidth-8) x=Math.round(ev.clientX-w-14); if(y<8) y=Math.round(ev.clientY+16); tip.style.transform=`translate(${x}px,${y}px)`; }
+function hideTip(){ tip.classList.remove('on'); }
+
+/* ===== Urteil / Klartext ===== */
+function verdict(){
+  const eL=E('L'), eR=E('R');
+  const fL=mid(thrust(eL)), fR=mid(thrust(eR)), iL=mid(isp(eL)), iR=mid(isp(eR));
+  const k=(e,s)=>`<span class="k"><i style="background:var(--c${s})"></i>${short(e)}</span>`;
+  const fOK=fL!=null&&fR!=null, iOK=iL!=null&&iR!=null;
+  const fW=fOK? (Math.max(fL,fR)/Math.min(fL,fR)<1.05?null:(fL>fR?'L':'R')) : null;
+  const iW=iOK? (Math.max(iL,iR)/Math.min(iL,iR)<1.05?null:(iL>iR?'L':'R')) : null;
+  const fr=fOK? Math.max(fL,fR)/Math.min(fL,fR) : 0, ir=iOK? Math.max(iL,iR)/Math.min(iL,iR) : 0;
+  const fPart = !fOK ? `Schub (${ptName()}): für ${fL==null?short(eL):short(eR)} keine Angabe` : fW==null ? 'Beide drücken etwa gleich stark' :
+    S.lvl===1? `${k(E(fW),fW)} drückt ${fmtR(fr)} so stark` : `${k(E(fW),fW)} hat ${fmtR(fr)} so viel Schub`;
+  let iPart;
+  if(!iOK) iPart=`Isp (${ptName()}): für ${iL==null?short(eL):short(eR)} keine Angabe`;
+  else if(iW==null) iPart='beim Isp liegen beide gleichauf';
+  else if(iW===fW) iPart=`und ist obendrein ${fmtRx(ir)} ${S.lvl===1?'sparsamer':'effizienter (Isp)'}`;
+  else iPart=`${k(E(iW),iW)} ist ${fmtRx(ir)} ${S.lvl===1?'sparsamer':'effizienter (Isp)'}`;
+  let s=fPart+(iPart.startsWith('und')?' ':', ')+iPart+'.';
+  const none=[eL,eR].filter(e=>mid(thrust(e))==null&&mid(isp(e))==null);
+  if(none.length) s=`Für ${none.map(short).join(' und ')} sind auf ${ptName()} weder Schub noch Isp belegt – schalte auf ${S.pt==='V'?'Meereshöhe':'Vakuum'}.`;
+  setText($('#verdict'), s, true);
+}
+
+/* ===== Δv-Rennen ===== */
+const svg=$('#trk'); const NS='http://www.w3.org/2000/svg';
+function racer(e){
+  let F=thrust(e,'V'), I=isp(e,'V'), srcF='V', srcI='V';
+  if(F==null){ F=thrust(e,'SL'); srcF='SL'; } if(I==null){ I=isp(e,'SL'); srcI='SL'; }
+  F=mid(F); I=mid(I);
+  const ve=I*G0, m0=S.m0, mT=S.fr*m0, Rm=1/(1-S.fr), dv=ve*Math.log(Rm);
+  const md=F!=null? F*1000/ve : null, tb=md? mT/md : null, a0=F!=null? F*1000/m0 : null;
+  return {e,F,I,ve,m0,mT,Rm,dv,md,tb,a0,srcF,srcI};
+}
+let RC=null, raceT0=0, raceRAF=0, raceP=1, raceDirty=true, raceSeen=false;
+const RACE_MS=7000;
+function vAt(r,t){ if(r.tb==null) return raceP>=1? r.dv : 0; if(t>=r.tb) return r.dv; return r.ve*Math.log(r.m0/(r.m0-r.md*t)); }
+function el(tag,attrs,parent){ const n=document.createElementNS(NS,tag); for(const k in attrs) n.setAttribute(k,attrs[k]); if(parent) parent.appendChild(n); return n; }
+function niceStep(max,n){ const raw=max/n, p=Math.pow(10,Math.floor(Math.log10(raw))), f=raw/p; return (f<1.5?1:f<3?2:f<7?5:10)*p; }
+const TICKS_T=[[.001,'1 ms'],[.01,'0,01 s'],[.1,'0,1 s'],[1,'1 s'],[10,'10 s'],[60,'1 min'],[600,'10 min'],[3600,'1 h'],[86400,'1 Tag'],[604800,'1 Woche'],[2629800,'1 Monat'],[31557600,'1 Jahr'],[315576000,'10 Jahre'],[3155760000,'100 Jahre'],[31557600000,'1000 Jahre'],[3.15576e13,'1 Mio. Jahre'],[3.15576e15,'100 Mio. J.']];
+function setupRace(){
+  const rs={L:racer(E('L')),R:racer(E('R'))};
+  const W=Math.max(300,Math.round(svg.getBoundingClientRect().width||svg.parentNode.clientWidth));
+  const narrow=W<560;
+  const padL=narrow?12:20, padR=narrow?16:28, x0=padL, x1=W-padR;
+  const laneY={L:narrow?82:78,R:narrow?162:152}, axY=narrow?204:196, tlY=narrow?258:248, H=narrow?322:304;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('height',H); svg.textContent='';
+  const vmax=Math.max(rs.L.dv,rs.R.dv,1)*1.1;
+  const X=v=>Math.round(x0+(v/vmax)*(x1-x0));
+  // Gitter + Achse Δv
+  const st=niceStep(vmax/1000, narrow?4:6)*1000; const g=el('g',{},svg);
+  for(let v=0; v<=vmax+1e-9; v+=st){ const x=X(v); el('line',{x1:x,x2:x,y1:36,y2:axY,stroke:'rgba(12,14,19,.07)','stroke-width':1},g);
+    if(x>x1-(narrow?62:72)) continue; const t=el('text',{x:x,y:axY+16,'text-anchor':v===0?'start':'middle','font-size':11,fill:'#737a87'},g); t.textContent= v===0? '0' : num(v/1000,2); }
+  const ut=el('text',{x:x1,y:axY+16,'text-anchor':'end','font-size':11,fill:'#737a87','font-weight':600},g); ut.textContent='Δv in km/s';
+  // Referenz aus dem Brief: Dawn sammelte ca. 11 km/s Δv
+  if(11000<vmax){ const x=X(11000); el('line',{x1:x,x2:x,y1:30,y2:axY,stroke:'#7c5cff','stroke-width':1,'stroke-opacity':.55},g);
+    const lbl=narrow?'Dawn: ca. 11 km/s':'Dawn: ca. 11 km/s (in ca. 11 Jahren)'; const left=x-x0>lbl.length*6; const t=el('text',{x:left?x-6:x+6,y:axY-6,'text-anchor':left?'end':'start','font-size':11,fill:'#3a3f4a','font-weight':600},g); t.textContent=lbl; }
+  // Bahnen
+  const parts={};
+  ['L','R'].forEach(s=>{
+    const r=rs[s], y=laneY[s], c=s==='L'?'#2a78d6':'#eb6834';
+    el('line',{x1:x0,x2:x1,y1:y,y2:y,stroke:'rgba(12,14,19,.12)','stroke-width':1},svg);
+    const lab=el('text',{x:x0,y:y-22,'font-size':12.5,'font-weight':700,fill:'#0c0e13'},svg); lab.textContent=short(r.e);
+    const fin=el('line',{x1:X(r.dv),x2:X(r.dv),y1:y-10,y2:y+10,stroke:c,'stroke-width':2,'stroke-linecap':'round',opacity:0},svg);
+    const grp=el('g',{},svg);
+    const pc=PL[r.e.pl];
+    const plume=el('path',{d:'M-26,-4 L-26,4 L-62,0 Z',fill:pc[2],opacity:.9,class:'rr-plume'},grp);
+    el('path',{d:'M0,0 C-4,-5 -10,-7 -16,-7 L-24,-7 L-30,-12 L-30,12 L-24,7 L-16,7 C-10,7 -4,5 0,0 Z',fill:c,stroke:'#fff','stroke-width':2,'paint-order':'stroke'},grp);
+    el('circle',{cx:-13,cy:0,r:2.4,fill:'#fff'},grp);
+    const vt=el('text',{y:y+28,'font-size':12,'font-weight':600,fill:'#3a3f4a','font-variant-numeric':'tabular-nums'},svg);
+    parts[s]={grp,plume,vt,fin,y};
+  });
+  // Zeitachse (logarithmisch)
+  const tbs=[rs.L.tb,rs.R.tb].filter(v=>v!=null&&isFinite(v)&&v>0);
+  let tE=(tbs.length?Math.max(...tbs):10)*2.2, tS=(tbs.length?Math.min(...tbs):1)/40; if(tE/tS<300) tS=tE/300; tS=Math.max(tS,1e-4);
+  const lS=Math.log10(tS), lE=Math.log10(tE);
+  const TX=t=>Math.round(x0+clamp((Math.log10(Math.max(t,tS))-lS)/(lE-lS),0,1)*(x1-x0));
+  const tl=el('g',{},svg);
+  el('line',{x1:x0,x2:x1,y1:tlY+28,y2:tlY+28,stroke:'rgba(12,14,19,.14)','stroke-width':1},tl);
+  let lastX=-1e9; TICKS_T.forEach(([t,l])=>{ if(t<tS||t>tE) return; const x=TX(t); el('line',{x1:x,x2:x,y1:tlY-6,y2:tlY+28,stroke:'rgba(12,14,19,.07)','stroke-width':1},tl);
+    if(x-lastX>(narrow?52:62) && x<x1-30){ const tx=el('text',{x:x,y:tlY+44,'text-anchor':'middle','font-size':10.5,fill:'#737a87'},tl); tx.textContent=l; lastX=x; } });
+  const tlab=el('text',{x:x0,y:tlY-12,'font-size':11,'font-weight':600,fill:'#737a87'},tl); tlab.textContent='Brenndauer · Zeit logarithmisch';
+  ['L','R'].forEach((s,i)=>{ const r=rs[s], y=tlY+i*12, c=s==='L'?'#2a78d6':'#eb6834';
+    el('rect',{x:x0,y:y,width:Math.max(0,x1-x0),height:8,rx:0,fill:'#e7eaee'},tl);
+    if(r.tb!=null){ const w=TX(r.tb)-x0; const b=el('path',{d:`M${x0},${y} h${Math.max(0,w-4)} a4,4 0 0 1 4,4 a4,4 0 0 1 -4,4 h${-Math.max(0,w-4)} Z`,fill:c},tl); parts[s].tbar=b; parts[s].tbw=w; b.style.clipPath='inset(0 100% 0 0)'; }
+  });
+  const ph=el('line',{x1:x0,x2:x0,y1:36,y2:tlY+30,stroke:'#0c0e13','stroke-width':1,'stroke-opacity':.5},svg);
+  RC={rs,X,TX,tS,tE,parts,ph,x0,x1,narrow};
+  renderTiles(); raceText(); formula();
+}
+function drawRace(p){
+  if(!RC) return; raceP=p;
+  const t=RC.tS*Math.pow(RC.tE/RC.tS,p);
+  ['L','R'].forEach(s=>{ const r=RC.rs[s], P=RC.parts[s];
+    const v=vAt(r,t), x=RC.X(v); P.grp.setAttribute('transform',`translate(${Math.max(x,RC.x0+30)},${P.y})`);
+    const burning = r.tb!=null && t<r.tb && p<1;
+    P.plume.style.opacity=burning?'.9':'0';
+    const txt = r.tb==null && p<1 ? 'Zeitverlauf: kein Schub belegt' : fmtV(v)+(r.tb!=null&&t>=r.tb?(RC.narrow?' · aus':' · Brennschluss'):'');
+    if(P.vt.textContent!==txt){ P.vt.textContent=txt; P.tw=P.vt.getComputedTextLength(); }
+    const lx=Math.max(RC.x0, Math.min(Math.max(x,RC.x0+30)-30, RC.x1-(P.tw||80)));
+    P.vt.setAttribute('x',Math.round(lx));
+    P.fin.setAttribute('opacity', (r.tb!=null&&t>=r.tb)||p>=1 ? '1':'0');
+    if(P.tbar){ const cur=RC.TX(Math.min(t,r.tb))-RC.x0; const pct=P.tbw>0? clamp(1-cur/P.tbw,0,1)*100:0; P.tbar.style.clipPath=`inset(0 ${pct.toFixed(2)}% 0 0)`; }
+  });
+  const px=RC.TX(t); RC.ph.setAttribute('x1',px); RC.ph.setAttribute('x2',px); RC.ph.style.opacity = p>=1?'0':'1';
+  $('#clk').textContent='t = '+fmtDur(p>=1? Math.max(...[RC.rs.L.tb,RC.rs.R.tb].filter(x=>x!=null)) : t);
+  document.querySelectorAll('.tile .badge').forEach(b=>b.classList.toggle('on',p>=1&&b.dataset.w==='1'));
+}
+function runRace(){
+  setupRace(); cancelAnimationFrame(raceRAF); raceDirty=false;
+  if(RM.matches){ drawRace(1); return; }
+  raceT0=performance.now(); drawRace(0);
+  const tick=now=>{ const p=clamp((now-raceT0)/RACE_MS,0,1); drawRace(p); if(p<1) raceRAF=requestAnimationFrame(tick); };
+  raceRAF=requestAnimationFrame(tick);
+}
+function renderTiles(){
+  const {L,R:Rr}=RC.rs; const far = L.dv>Rr.dv*1.02?'L':Rr.dv>L.dv*1.02?'R':null;
+  const fast = (L.a0!=null&&Rr.a0!=null)? (L.a0>Rr.a0*1.02?'L':Rr.a0>L.a0*1.02?'R':null):null;
+  const acc=a=> a==null?'keine Angabe': a>=G0*.1? num(a/G0,2)+' g' : num(a,2)+' m/s²';
+  $('#tiles').innerHTML=['L','R'].map(s=>{ const r=RC.rs[s];
+    return `<div class="tile ${s}"><h3>${r.e.name}<span class="badge" data-w="${far===s?1:0}">kommt weiter</span><span class="badge" data-w="${fast===s?1:0}">zieht schneller an</span></h3>
+     <div class="kv"><div><span>Δv am Ende</span><b>${fmtV(r.dv)}</b></div><div><span>Brenndauer</span><b>${r.tb!=null?fmtDur(r.tb):'keine Angabe'}</b></div><div><span>Startbeschl. F/m₀</span><b>${acc(r.a0)}</b></div></div></div>`; }).join('');
+}
+function raceText(){
+  const {L,R:Rr}=RC.rs; const lvl=S.lvl;
+  const far = L.dv>=Rr.dv? L:Rr, near= far===L?Rr:L;
+  const fast = (L.a0||0)>=(Rr.a0||0)? L:Rr, slow= fast===L?Rr:L;
+  const rd=far.dv/near.dv; const ra=fast.a0&&slow.a0? fast.a0/slow.a0 : null;
+  let s='';
+  if(Math.abs(rd-1)<.02) s=`Gleicher Isp, gleiches Ziel: beide kommen auf ca. ${fmtV(far.dv)}${ra&&ra>1.05? ` – ${short(fast.e)} ist nur schneller dort`:''}.`;
+  else if(fast===far || !ra) s=`<b>${short(far.e)}</b> gewinnt beides: zieht stärker an und kommt ${fmtR(rd)} so weit.`;
+  else if(lvl===1) s=`<b>${short(fast.e)}</b> ist der Sprinter: Nach ${fmtDur(fast.tb)} ist sein Tank leer. <b>${short(far.e)}</b> ist der Marathonläufer: Es schiebt ${fmtDur(far.tb)} lang ganz sanft – und kommt am Ende ${fmtR(rd)} so weit.`;
+  else if(lvl===2) s=`<b>${short(fast.e)}</b> beschleunigt ${fmtR(ra)} so stark, ist aber nach ${fmtDur(fast.tb)} leer. <b>${short(far.e)}</b> braucht ${fmtDur(far.tb)}, erreicht aber ${fmtR(rd)} so viel Δv. Das Δv hängt nur vom Isp und vom Massenverhältnis ab – der Schub entscheidet nur, wie schnell es geht.`;
+  else s=`Δv ∝ Isp (bei gleichem m₀/m_f), Brenndauer t ∝ Isp/F. Hier: Δv-Verhältnis ${num(rd,3)}, Beschleunigungsverhältnis ${num(ra,3)}. Für den Start vom Boden zählt dagegen Schub > Gewicht – deshalb fliegen Ionentriebwerke nur im All.`;
+  const notes=[]; [L,Rr].forEach(r=>{ if(r.srcF==='SL'&&r.F!=null) notes.push(`${short(r.e)}: kein Vakuumschub belegt, Meereshöhenwert verwendet`); if(r.srcI==='SL') notes.push(`${short(r.e)}: kein Vakuum-Isp belegt, Meereshöhenwert verwendet`); if(Array.isArray(thrust(r.e,'V'))||Array.isArray(isp(r.e,'V'))) notes.push(`${short(r.e)}: Mitte des belegten Bereichs`); });
+  setText($('#rtext'), s+(notes.length? ` <span style="color:var(--mute)">(${notes.join('; ')}.)</span>`:''), true);
+}
+function formula(){
+  const fx=$('#fx'); const {L,R:Rr}=RC.rs;
+  if(S.lvl===1){ setText(fx,'',true); return; }
+  const ln=num(Math.log(L.Rm),3);
+  let h=`<div><code>Δv = vₑ · ln(m₀ / m_f)</code> · m₀/m_f = ${num(L.Rm,3)}</div>`;
+  if(S.lvl===3){
+    h=`<div><code>Δv = Isp · g₀ · ln(m₀ / m_f)</code></div>`+[L,Rr].map(r=>`<div>${short(r.e)}: ${num(r.I,3)} s · 9,80665 m/s² · ln(${num(r.Rm,3)}) = ${fmtV(r.dv)}</div>`).join('')+
+      `<div style="margin-top:6px"><code>t = m_T · Isp · g₀ / F</code></div>`+[L,Rr].map(r=>`<div>${short(r.e)}: ${num(r.mT,3)} kg · ${num(r.I,3)} s · 9,80665 m/s² / ${r.F!=null?num(r.F*1000,3)+' N':'–'} = ${r.tb!=null?fmtDur(r.tb):'keine Angabe'}</div>`).join('')+
+      `<div style="margin-top:6px"><code>a₀ = F / m₀</code> (ohne Schwerkraft) · <code>v(t) = vₑ · ln(m₀ / (m₀ − ṁ·t))</code>, ṁ = F/vₑ</div>`;
+  } else h+= [L,Rr].map(r=>`<div>${short(r.e)}: ${fmtV(r.ve)} · ${ln} = ${fmtV(r.dv)}</div>`).join('');
+  setText(fx,h,true);
+}
+
+/* Regler */
+const m0In=$('#m0'), frIn=$('#fr');
+const m0From=x=>{ const v=Math.pow(10, x/1000*Math.log10(3e6)); return sig(v,2); };
+const m0To=v=>Math.round(Math.log10(v)/Math.log10(3e6)*1000);
+function sliderUI(){ $('#m0o').textContent=num(S.m0,2)+' kg'; $('#fro').textContent=Math.round(S.fr*100)+' % · m₀/m_f = '+num(1/(1-S.fr),3);
+  m0In.style.setProperty('--p',(m0In.value/10)+'%'); frIn.style.setProperty('--p',((frIn.value-1)/98*100)+'%'); }
+let rT=0;
+function raceChanged(){ raceDirty=true; clearTimeout(rT); rT=setTimeout(()=>{ if(raceSeen) runRace(); },380); }
+m0In.addEventListener('input',()=>{ S.m0=m0From(+m0In.value); sliderUI(); raceChanged(); });
+frIn.addEventListener('input',()=>{ S.fr=+frIn.value/100; sliderUI(); raceChanged(); });
+$('#go').onclick=runRace;
+new IntersectionObserver(es=>{ es.forEach(en=>{ if(en.isIntersecting&&(!raceSeen||raceDirty)){ raceSeen=true; runRace(); } }); },{threshold:.35}).observe($('#race'));
+let rw=0; new ResizeObserver(()=>{ const w=svg.getBoundingClientRect().width; if(Math.abs(w-rw)>2){ rw=w; if(RC){ setupRace(); drawRace(raceP); } } }).observe(svg.parentNode);
+
+/* ===== Picker ===== */
+let pkSide='L', lastFocus=null;
+function openPicker(side){
+  pkSide=side; lastFocus=document.activeElement;
+  $('#pkh').innerHTML=`<i style="background:var(--c${side})"></i>Triebwerk für die ${side==='L'?'blaue':'orange'} Ecke`;
+  const cur=S[side], opp=S[other(side)];
+  $('#pkb').innerHTML=FAM_ORDER.map(f=>{ const list=ENG.filter(e=>e.fam===f); if(!list.length) return '';
+    return `<div class="grp"><h3><i style="background:${FAM[f].c}"></i>${FAM[f].l}</h3><div class="pgrid">`+list.map(e=>
+      `<button class="pc ${e.id===cur?'cur':''}" type="button" data-id="${e.id}" style="--pc:var(--c${side})">${e.id===cur?'<em>gewählt</em>':e.id===opp?'<em>Gegner</em>':''}<div class="mini">${artSVG(e,S.pt,true)}</div><b>${short(e)}</b><span>${e.typ}</span></button>`).join('')+`</div></div>`; }).join('');
+  $('#pkb').querySelectorAll('.pc').forEach(b=>b.onclick=()=>{ const id=b.dataset.id; if(id===S[other(side)]) S[other(side)]=S[side]; S[side]=id; closePicker(); update(); });
+  const pk=$('#picker'); pk.classList.add('on'); pk.setAttribute('aria-hidden','false');
+  setTimeout(()=>{ (pk.querySelector('.pc.cur')||pk.querySelector('.pc')).focus({preventScroll:true}); },60);
+}
+function closePicker(){ const pk=$('#picker'); pk.classList.remove('on'); pk.setAttribute('aria-hidden','true'); if(lastFocus) lastFocus.focus({preventScroll:true}); }
+$('#pkx').onclick=closePicker;
+$('#picker').addEventListener('click',ev=>{ if(ev.target.id==='picker') closePicker(); });
+document.addEventListener('keydown',ev=>{ if(ev.key==='Escape'&&$('#picker').classList.contains('on')) closePicker(); });
+
+/* ===== Tauschen / Zufall ===== */
+let swapping=false;
+function swap(){
+  if(swapping) return; swapping=true;
+  const a=$('#fL'), b=$('#fR'); const dx=b.getBoundingClientRect().left-a.getBoundingClientRect().left;
+  const done=()=>{ [S.L,S.R]=[S.R,S.L]; [shown.L,shown.R]=[shown.R,shown.L]; [shown.ptL,shown.ptR]=[shown.ptR,shown.ptL];
+    // Illustrationen mitnehmen statt neu aufbauen
+    const aa=a.querySelector('.art'), bb=b.querySelector('.art'); const tmp=aa.innerHTML; aa.innerHTML=bb.innerHTML; bb.innerHTML=tmp;
+    a.classList.remove('slide'); b.classList.remove('slide'); a.style.transform=''; b.style.transform=''; update(); swapping=false; };
+  if(RM.matches){ done(); return; }
+  a.classList.add('slide'); b.classList.add('slide');
+  a.style.transform=`translateX(${dx}px)`; b.style.transform=`translateX(${-dx}px)`;
+  setTimeout(done,720);
+}
+$('#swap').onclick=swap; $('#vs').onclick=swap;
+$('#rand').onclick=()=>{ const ids=ENG.map(e=>e.id); let a,b,n=0; do{ a=ids[Math.floor(Math.random()*ids.length)]; b=ids[Math.floor(Math.random()*ids.length)]; n++; }
+  while((a===b || BY[a].fam===BY[b].fam && n<20 || (a===S.L&&b===S.R)) && n<60); S.L=a; S.R=b; update(); };
+
+/* ===== Segment-Schalter ===== */
+function seg(id,key,cast){
+  const root=$(id), ind=root.querySelector('.ind'), btns=[...root.querySelectorAll('button')];
+  const place=()=>{ const b=btns.find(x=>x.getAttribute('aria-checked')==='true'); ind.style.width=b.offsetWidth+'px'; ind.style.transform=`translateX(${b.offsetLeft}px)`; };
+  btns.forEach(b=>b.addEventListener('click',()=>{ btns.forEach(x=>x.setAttribute('aria-checked',x===b?'true':'false')); S[key]=cast(b.dataset.v); place(); update(); }));
+  root.addEventListener('keydown',ev=>{ if(ev.key!=='ArrowRight'&&ev.key!=='ArrowLeft') return; const i=btns.findIndex(x=>x.getAttribute('aria-checked')==='true'); const j=(i+(ev.key==='ArrowRight'?1:-1)+btns.length)%btns.length; btns[j].click(); btns[j].focus(); });
+  addEventListener('resize',place); document.fonts&&document.fonts.ready.then(place); place();
+}
+
+/* ===== Texte je Stufe ===== */
+const LEAD=[
+ 'Zwei Triebwerke treten gegeneinander an: Wer drückt stärker, wer ist sparsamer – und wer bringt dieselbe Rakete am weitesten? Wähle die Gegner oben, wische über ein Bild oder lass würfeln.',
+ 'Zwei Antriebe im direkten Vergleich: Schub, spezifischer Impuls, Kammerdruck, Masse und Betriebseigenschaften als gespiegelte Balken – danach die Raketengleichung als Rennen.',
+ 'Kennzahlen gespiegelt auf festen Skalen für alle 13 Triebwerke (Schub, Masse, ṁ logarithmisch). Das Rennen rechnet Ziolkowski mit konstantem Schub, ohne Schwerkraft- und Luftverluste.'];
+const MLEAD=['Der längere Balken gewinnt die Runde und leuchtet auf.','Gleiche Skala für alle Triebwerke – der Wechsel zeigt echte Größenordnungen.','Feste Skalen, Werte als gerundete Richtwerte aus der Datenbasis.'];
+const RLEAD=['Gleiche Rakete, anderer Antrieb: Wer ist schneller weg, wer kommt weiter?','Gleiche Startmasse und gleicher Treibstoffanteil, nur der Antrieb ist anders. Die Bahn zeigt das erreichte Δv, unten läuft die Brenndauer.','Δv = Isp·g₀·ln(m₀/m_f) und v(t) bei konstantem Schub. Bahn linear in Δv, Uhr logarithmisch in der Zeit.'];
+
+function legend(){ $('#legend').innerHTML=['L','R'].map(s=>`<span><i style="background:var(--c${s})"></i>${short(E(s))}</span>`).join(''); }
+function update(){
+  setText($('#lead'),LEAD[S.lvl-1]); setText($('#mlead'),MLEAD[S.lvl-1]); setText($('#rlead'),RLEAD[S.lvl-1]);
+  $('#mfine').textContent=`Betriebspunkt: ${ptName()} (Schub, Isp und daraus abgeleitete Größen). Alle Werte sind gerundete Richtwerte (ca.) aus der Datenbasis; „keine Angabe“ = dort nicht belegt. Bereiche: Balken bis zum Höchstwert, heller Teil = Spanne.`;
+  $('#rfine').textContent='Gedankenexperiment wie im Formelteil: gleiche Rakete für beide, Triebwerksmasse, Schwerkraft und Luftwiderstand werden ignoriert, Schub konstant. Das Rennen nutzt Vakuumwerte (sonst Meereshöhe, falls nur diese belegt).';
+  renderFighter('L'); renderFighter('R'); legend(); updateRows(); verdict(); renderTable();
+  if(raceSeen) raceChanged(); else raceDirty=true;
+}
+
+/* ===== Tabelle (Fallback) ===== */
+function renderTable(){
+  const na='<span class="na" title="keine Angabe">k. A.</span>';
+  const n=(v,f)=> v==null? na : f(v);
+  const fk=v=>Array.isArray(v)? num(v[0],3)+'–'+num(v[1],3) : num(v,3);
+  let h=`<thead><tr><th>Triebwerk</th><th>Typ</th><th>Treibstoffe</th><th class="n">Schub MH [kN]</th><th class="n">Schub Vak. [kN]</th><th class="n">Isp MH [s]</th><th class="n">Isp Vak. [s]</th><th class="n">pᶜ [bar]</th><th class="n">Masse [kg]</th><th>Wiederzündb.</th><th>Regelbar</th><th>Reifegrad</th><th>Ins Duell</th></tr></thead><tbody>`;
+  ENG.forEach(e=>{ h+=`<tr class="${e.id===S.L?'isL':e.id===S.R?'isR':''}"><td>${e.name}</td><td>${e.typ}</td><td>${e.prop}</td><td class="n">${n(e.fSL,fk)}</td><td class="n">${n(e.fV,fk)}</td><td class="n">${n(e.iSL,fk)}</td><td class="n">${n(e.iV,fk)}</td><td class="n">${n(e.pc,fk)}</td><td class="n">${n(e.m,fk)}</td><td>${e.re||na}</td><td>${e.th||na}</td><td>${e.mat}</td>`+
+    `<td><span class="tset"><button type="button" data-s="L" data-id="${e.id}"><i style="background:var(--cL)"></i>blau</button><button type="button" data-s="R" data-id="${e.id}"><i style="background:var(--cR)"></i>orange</button></span></td></tr>`; });
+  h+='</tbody><caption class="sr">Vergleichsdaten aller 13 Triebwerke; k. A. = keine Angabe</caption>';
+  const t=$('#table'); t.innerHTML=h;
+  t.querySelectorAll('.tset button').forEach(b=>b.onclick=()=>{ const s=b.dataset.s, id=b.dataset.id; if(id===S[other(s)]) S[other(s)]=S[s]; S[s]=id; update(); $('.arena').scrollIntoView({behavior:RM.matches?'auto':'smooth',block:'center'}); });
+}
+
+/* ===== Start ===== */
+buildFighter('L'); buildFighter('R'); buildRows();
+m0In.value=m0To(S.m0); frIn.value=Math.round(S.fr*100); sliderUI();
+seg('#lvl','lvl',v=>+v); seg('#pt','pt',v=>v);
+update();
+requestAnimationFrame(()=>requestAnimationFrame(()=>document.documentElement.classList.remove('noanim')));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "title": "Endprodukt",
+  "round": 5,
+  "variants": [
+    { "id": "E1", "name": "Endprodukt", "file": "variant-e1.html", "idea": "F1 poliert zum Endprodukt: Bauteile direkt im 3D anklickbar, noch flüssigerer Bauteilwechsel, maximale Qualität." },
+    { "id": "E2", "name": "Endprodukt + Zoom", "file": "variant-e2.html", "idea": "E1 plus freier Zoom (Mausrad, zwei Finger, + / − Buttons) in Bauteil- und Funktionsansicht." }
+  ]
+}

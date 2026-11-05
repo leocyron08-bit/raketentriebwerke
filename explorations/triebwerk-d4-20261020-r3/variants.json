@@ -1,0 +1,10 @@
+{
+  "title": "Split-Screen – Inhalt & Tiefe",
+  "round": 3,
+  "variants": [
+    { "id": "R1", "name": "Akkordeon", "file": "variant-r1.html", "idea": "Bauteil-Zeilen klappen direkt in der Spalte auf (Aufgabe / So funktioniert's / Material / Zahlen); Modell zoomt aufs Teil." },
+    { "id": "R2", "name": "Drilldown", "file": "variant-r2.html", "idea": "Klick aufs Bauteil öffnet eine eigene Detailseite in der Spalte (mit Zurück); auf der Bühne steht das Teil isoliert, inklusive Schnitt." },
+    { "id": "R3", "name": "Kapitel-Reiter", "file": "variant-r3.html", "idea": "Spalte mit Reitern Überblick · Bauteile · Funktion · Entwicklung; jeder Reiter in sich aufklappbar, Fachbegriffe als Mini-Popover." },
+    { "id": "R4", "name": "Steckbrief & Vergleich", "file": "variant-r4.html", "idea": "Pro Bauteil ein aufklappbarer Steckbrief plus „Wie machen es die anderen Triebwerke?“-Vergleich; Entwicklung als Zeitleiste." }
+  ]
+}

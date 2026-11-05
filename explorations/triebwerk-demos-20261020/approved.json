@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-20",
+  "favorite": "D",
+  "ratings": { "A": 1, "B": 1, "C": 1, "D": 5 },
+  "decisions": [
+    "Richtung D (Explosionszeichnung, heller Studio-Look, PBR, Zerlegen + Bauteil-Details) wird weiterverfolgt",
+    "A (dunkles HUD), B (Scrollytelling), C (Simulator) verworfen"
+  ],
+  "issues": [
+    "Labels/Schrift flackern",
+    "Layout noch nicht on point",
+    "Phasen der Funktion brauchen mehr Erklärung"
+  ],
+  "user_ideas": ["Labels ein-/ausblenden oder zur Seite fahren"],
+  "next_steps": ["Runde 2: 4 polierte Varianten von D"]
+}

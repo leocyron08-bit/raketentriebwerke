@@ -1,0 +1,34 @@
+{
+  "exploration": "Raketentriebwerke – 4 Richtungen",
+  "round": 1,
+  "favorite": "D",
+  "variants": [
+    {
+      "id": "A",
+      "name": "Mission Control",
+      "rating": 1,
+      "notes": ""
+    },
+    {
+      "id": "B",
+      "name": "Die Reise",
+      "rating": 1,
+      "notes": ""
+    },
+    {
+      "id": "C",
+      "name": "Prüfstand",
+      "rating": 1,
+      "notes": ""
+    },
+    {
+      "id": "D",
+      "name": "Explosionszeichnung",
+      "rating": 5,
+      "notes": "es flackert die schrift bzw. die labsl - layout ist noch nicht on point - evlt. ein und ausblednen oder zur seite fahren und mehr erklärungen für die phasen"
+    }
+  ],
+  "combine": "es flackert die schrift bzw. die labsl - layout ist noch nicht on point - evlt. ein und ausblednen oder zur seite fahren und mehr erklärungen für die phasen",
+  "overall": "",
+  "received_at": "2026-10-20T20:36:30"
+}

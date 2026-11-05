@@ -1,0 +1,10 @@
+{
+  "title": "Layout – alles drin, aber übersichtlich",
+  "round": 7,
+  "variants": [
+    { "id": "L1", "name": "App-Ansicht", "file": "variant-l1.html", "idea": "Bildschirmfüllende App ohne Seiten-Scrollen: oben Bereiche Triebwerk · Lernen · Vergleich, rechts ein Panel mit genau einem Kapitel zur Zeit." },
+    { "id": "L2", "name": "Kapitel-Index", "file": "variant-l2.html", "idea": "Split-Screen bleibt; die Spalte bekommt einen klebenden Kapitel-Index, Kapitel starten als kompakte Zusammenfassung, Bauteile als Raster statt langer Liste." },
+    { "id": "L3", "name": "Bento-Raster", "file": "variant-l3.html", "idea": "Breite 3D-Bühne oben, darunter ein Kachel-Raster mit allen Bereichen auf einen Blick; Kachel klappt an Ort und Stelle auf und steuert die Bühne." },
+    { "id": "L4", "name": "Seitenleiste & Drawer", "file": "variant-l4.html", "idea": "Links feste Seitenleiste mit allen 11 Antrieben nach Familie, Bühne groß in der Mitte, Infos in einem Drawer, der erst bei Interaktion aufgeht." }
+  ]
+}

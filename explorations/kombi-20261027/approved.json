@@ -1,0 +1,14 @@
+{
+  "favorite": "k2",
+  "ratings": {"k1": 2, "k2": 5},
+  "decisions": [
+    "K2 'Bühne zuerst' ist die finale Layout-Richtung",
+    "Aufbau und Unterteilung (Bereiche Triebwerke / Lernen / Vergleich, Kapitel-Reiter) bleiben unverändert",
+    "Beide Info-Seiten (Seitenleiste + Seitenfenster) einklappbar bleibt"
+  ],
+  "next_steps": [
+    "K2 finalisieren: bekannte Schwächen beheben, Feinschliff, keine Struktur-Änderungen",
+    "Danach DESIGN.md festschreiben und finalen Stack entscheiden"
+  ],
+  "date": "2026-10-29"
+}

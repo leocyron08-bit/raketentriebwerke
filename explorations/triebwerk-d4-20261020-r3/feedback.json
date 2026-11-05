@@ -1,0 +1,11 @@
+{
+  "source": "pasted text (Leo, 2026-10-21)",
+  "favorite": "R1",
+  "ratings": { "R1": 5, "R2": 1, "R3": 1, "R4": 4 },
+  "notes": {
+    "R1": "sehr guter Aufbau, gute Animationen",
+    "R4": "der Vergleich ist gut"
+  },
+  "combine": "Animation von R1 ist super, Informationen sind gut wiedergegeben. Der Vergleich am Ende von R4 sollte auch übernommen werden zwischen den verschiedenen Antrieben.",
+  "overall": "Jetzt soll alles zusammengebracht werden, Animationen verfeinern, das Steuern zwischen den verschiedenen Bauteilen noch bisschen smoother."
+}

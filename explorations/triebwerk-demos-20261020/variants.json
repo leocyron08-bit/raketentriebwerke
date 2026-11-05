@@ -1,0 +1,10 @@
+{
+  "title": "Raketentriebwerke – 4 Richtungen",
+  "round": 1,
+  "variants": [
+    { "id": "A", "name": "Mission Control", "file": "variant-a.html", "idea": "Dunkles Blueprint-HUD, 3D-Schnittmodell mit Telemetrie, Freigabestufe 1–3, Zündsequenz." },
+    { "id": "B", "name": "Die Reise", "file": "variant-b.html", "idea": "Helles Editorial-Scrollytelling: die Kamera folgt einem Treibstofftropfen durchs Triebwerk." },
+    { "id": "C", "name": "Prüfstand", "file": "variant-c.html", "idea": "Hands-on-Simulator: Regler für Drossel, O/F, ε und Umgebungsdruck, Shader-Abgasstrahl mit Stoßdiamanten." },
+    { "id": "D", "name": "Explosionszeichnung", "file": "variant-d.html", "idea": "Produkt-Showcase im Studio-Look: Zerlegen in Einzelteile, Bauteile anklicken, Funktionsschnitt." }
+  ]
+}
