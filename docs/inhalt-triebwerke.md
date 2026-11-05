@@ -654,7 +654,7 @@ python3 nachgerechnet und gerundet; Eingangswerte stammen aus diesem Dokument, A
 - **Größen:** t [s], m_T nutzbare Treibstoffmasse [kg], ṁ [kg/s].
 - **Denkfehler:** Triebwerke laufen oft gedrosselt oder in Pausen, und ein Rest Treibstoff ist nicht nutzbar →
   reale Brenndauern weichen ab.
-- **Beispiel:** RL10B-2: ṁ = 110 kN / (465 s · g₀) ca. 24 kg/s; mit angenommen 30 t Treibstoff →
+- **Beispiel:** RL10B-2: ṁ = 110 kN / (465 s · g₀) ca. 24,1 kg/s; mit angenommen 30 t Treibstoff →
   t ca. 1240 s ≈ ca. 21 min. NSTAR mit angenommen 100 kg Xenon bei ca. 3 mg/s → ca. 3,3 · 10⁷ s ≈ ca. 380 Tage.
 
 ### F6 – Schub-Gewichts-Verhältnis
@@ -688,7 +688,7 @@ python3 nachgerechnet und gerundet; Eingangswerte stammen aus diesem Dokument, A
   Kerosin/LOX-ähnlich mit Tᶜ = 3500 K, *angenommen* M = 22 g/mol, γ = 1,2, pₑ/pᶜ = 0,007 → vₑ ca. 2990 m/s
   (Isp ca. 305 s; Größenordnung Merlin-Vakuumwert). Bei pₑ/pᶜ = 0,0007 → ca. 3340 m/s (ca. 340 s).
   Nuklear-thermisch mit reinem H₂: Tᶜ = 2270 K, M = 2 g/mol, *angenommen* γ = 1,4, pₑ/pᶜ = 0,001 →
-  vₑ ca. 7510 m/s (Isp ca. 770 s) – trotz kühlerem Gas mehr als das Doppelte, wegen der kleinen Molmasse.
+  vₑ ca. 7540 m/s (Isp ca. 770 s) – trotz kühlerem Gas mehr als das Doppelte, wegen der kleinen Molmasse.
 
 ### Spezifikation interaktiver Rechner
 Presets = Triebwerke aus der Vergleichstabelle (`id`); Eingaben als Slider + Zahlenfeld, Ausgabe live.
@@ -727,8 +727,7 @@ meist eine zusätzliche Rechenaufgabe) – jede Stufe sieht also 5 Fragen. **Bes
 Fragetypen: **MC** (Multiple Choice, genau eine richtige Antwort ✓), **W/F** (wahr/falsch), **Zahl**
 (Zahleneingabe; richtig, wenn die Abweichung höchstens die angegebene Toleranz in % beträgt).
 Alle Antworten stammen aus diesem Dokument; Rechenaufgaben mit g₀ = 9,80665 m/s² und python3 nachgerechnet.
-Bewusst *nicht* verwendet: die gerundeten Zwischenwerte aus F5 (1240 s), F7 (7510 m/s) und F6 (mit 9,81) –
-F5 und F6 sind hier mit exaktem g₀ und Toleranz formuliert. „Nachlesen“ verweist auf die angegebene Stelle.
+Rechenaufgaben zu F5 und F6 sind mit exaktem g₀ und Toleranz formuliert. „Nachlesen“ verweist auf die angegebene Stelle.
 
 ### Quiz Grundlagen (Kernprinzip, Antriebe ohne Verbrennung)
 1. **MC · alle:** Warum funktioniert eine Rakete auch im Weltall? – Sie stößt sich an der Luft ab · ✓ Sie wirft Gas
